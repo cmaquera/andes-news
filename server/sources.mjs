@@ -1,5 +1,6 @@
 import Parser from 'rss-parser';
 import { publicGet } from './net.mjs';
+import { assessFocus } from './focus.mjs';
 export const sources=[
   {id:'gestion',name:'Gestión · Tecnología',region:'Perú',kind:'rss',url:'https://gestion.pe/arc/outboundfeeds/rss/category/tecnologia/?outputType=xml'},
   {id:'xataka-mx',name:'Xataka México',region:'Latinoamérica',kind:'rss',url:'https://www.xataka.com.mx/rss2.xml'},
@@ -23,13 +24,13 @@ export async function loadSource(source,{get=publicGet,limit=20}={}){
   let items;
   if(source.kind==='rss'){
     const parser=new Parser();
-    items=(await parser.parseString(response.body)).items.slice(0,limit).map(j=>({title:plain(j.title),url:j.link,feedExcerpt:plain(j.contentSnippet??j.content??j.summary),imageUrl:j.enclosure?.type?.startsWith('image/')?j.enclosure.url:'',published:date(j.isoDate??j.pubDate)}));
+    items=(await parser.parseString(response.body)).items.slice(0,Math.min(100,limit*4)).map(j=>({title:plain(j.title),url:j.link,feedExcerpt:plain(j.contentSnippet??j.content??j.summary),imageUrl:j.enclosure?.type?.startsWith('image/')?j.enclosure.url:'',published:date(j.isoDate??j.pubDate)}));
   }else if(source.kind==='dev'){
     items=JSON.parse(response.body).slice(0,limit).map(j=>({title:j.title,url:j.url,apiArticleId:j.id,feedExcerpt:j.description??'',imageUrl:j.cover_image??'',published:date(j.published_at),score:j.positive_reactions_count??0,comments:j.comments_count??0}));
   }else{
     items=[];
     for(const id of JSON.parse(response.body).slice(0,40)){
-      try{const j=JSON.parse((await get(`https://hacker-news.firebaseio.com/v0/item/${id}.json`)).body);if(j&&!j.dead&&!j.deleted&&j.type==='story'&&j.url&&topicOf(j.title)!=='Tecnología')items.push({title:plain(j.title),url:j.url,feedExcerpt:'',imageUrl:'',published:date(j.time*1000),score:j.score??0,comments:j.descendants??0});}catch(_){}
+      try{const j=JSON.parse((await get(`https://hacker-news.firebaseio.com/v0/item/${id}.json`)).body);if(j&&!j.dead&&!j.deleted&&j.type==='story'&&j.url&&assessFocus({title:j.title,sourceId:'hn'}).accepted)items.push({title:plain(j.title),url:j.url,feedExcerpt:'',imageUrl:'',published:date(j.time*1000),score:j.score??0,comments:j.descendants??0});}catch(_){}
       if(items.length>=limit)break;
     }
   }

@@ -12,7 +12,7 @@ export function createApi({store,collector,apiToken=process.env.ANDES_API_TOKEN}
   const server=http.createServer((req,res)=>{
     const send=(status,data)=>{res.writeHead(status,{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'});res.end(JSON.stringify(data));};
     const url=new URL(req.url,'http://andes.internal');
-    if(req.method==='GET'&&url.pathname==='/')return send(200,{service:'Andes News',version:'0.4',health:'/health'});
+    if(req.method==='GET'&&url.pathname==='/')return send(200,{service:'Andes News',version:'0.4.1',health:'/health'});
     if(req.method==='GET'&&url.pathname==='/health')return send(200,{status:'ok'});
     if(!timingSafeEqual(hash(req.headers.authorization??''),secret))return send(401,{error:'Unauthorized'});
     if(req.method==='GET'&&url.pathname==='/sources')return send(200,{sources});
@@ -33,6 +33,6 @@ if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href){
   const store=new Store(process.env.DATABASE_PATH??'/data/andes.db');
   const collector=new Collector({store});
   const server=createApi({store,collector});
-  server.listen(parsePort(process.env.PORT??8787,'PORT'),process.env.HOST??'127.0.0.1',()=>{console.log('Andes News 0.4: rich article pipeline, collection every two hours');collector.start();});
+  server.listen(parsePort(process.env.PORT??8787,'PORT'),process.env.HOST??'127.0.0.1',()=>{console.log('Andes News 0.4.1: software/AI focus, collection every two hours');collector.start();});
   for(const signal of ['SIGINT','SIGTERM'])process.once(signal,()=>{collector.stop();server.close(()=>{store.close();process.exit(0);});});
 }

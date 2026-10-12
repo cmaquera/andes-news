@@ -11,7 +11,7 @@ import {loadSource,sources} from './sources.mjs';
 import {mkdirSync,mkdtempSync,rmSync} from 'node:fs';
 import {join,sep} from 'node:path';
 const token='test-only-token-with-at-least-32-characters';
-const candidate={title:'Release',url:'https://example.com/article',region:'Perú',sourceId:'gestion',sourceName:'Gestión',published:'2026-10-12T10:00:00Z',topic:'Programación'};
+const candidate={title:'Database release',url:'https://example.com/article',region:'Perú',sourceId:'gestion',sourceName:'Gestión',published:'2026-10-12T10:00:00Z',topic:'Programación'};
 const body=`<html lang="en"><head><title>Database release</title></head><body><nav>MENU</nav><article><h1>Database release</h1><p>${'The database introduces incremental backups with documented limits. '.repeat(20)}</p><h2>Technical details</h2><pre>const backup = true;</pre><p>The final paragraph states that the feature is experimental and requires manual activation.</p></article><div class="ad-container">ADVERT</div><div id="cookie-dialog">COOKIES</div><script>INJECTED()</script><footer>FOOTER</footer></body></html>`;
 test('Extracts original prose, headings and code without ads, cookies or scripts',()=>{
   const result=extractHtml(body,candidate.url);

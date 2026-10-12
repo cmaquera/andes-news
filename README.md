@@ -1,6 +1,6 @@
 # Andes News
 
-Android en Flutter y backend de noticias de programación y tecnología para Perú y Latinoamérica. Versión 0.4: el servidor recopila fuentes cada dos horas, recupera el cuerpo de los artículos, genera abstractos en español y conserva una lectura limpia con texto original, imágenes, tablas y traducción cuando hace falta.
+Android en Flutter y backend de noticias de desarrollo de software e IA para Perú y Latinoamérica. Backend 0.4.1 y APK 0.4: el servidor recopila fuentes cada dos horas, recupera el cuerpo de los artículos, genera abstractos en español y conserva una lectura limpia con texto original, imágenes, tablas y traducción cuando hace falta.
 
 ## Arquitectura
 
@@ -20,8 +20,10 @@ La app no consulta las fuentes ni ejecuta inferencias. Obtiene noticias y artíc
 
 ## Procesamiento
 
-- Recopila Gestión Tecnología, Xataka México, Genbeta, GitHub Changelog, DEV en español y Hacker News. Hasta 20 candidatos por fuente en cada ciclo; Hacker News inspecciona hasta 40 historias técnicas.
-- Deduplica por URL, conserva procedencia y prioriza fuentes de Perú/Latinoamérica dentro de cada día y temas técnicos.
+- Recopila Gestión Tecnología, Xataka México, Genbeta, GitHub Changelog, DEV en español y Hacker News. Inspecciona hasta 80 entradas RSS y selecciona hasta 20 noticias pertinentes por fuente en cada ciclo; Hacker News inspecciona hasta 40 historias.
+- Filtra antes de gastar GPU: acepta ingeniería de software, herramientas para desarrolladores y avances/métodos/aplicaciones concretas de IA. Excluye lanzamientos de consumo, ofertas, entretenimiento y noticias genéricas; mencionar IA no basta. Un celular puede pasar si su titular/extracto aporta SDK, inferencia o herramientas para desarrolladores, y cumple el enfoque técnico.
+- Revisa nuevamente la pertinencia con el cuerpo recuperado. El criterio es una política explícita por términos y contexto, no un clasificador de IA; puede omitir titulares ambiguos o aceptar algún falso positivo. Se conserva el motivo de selección en `relevance`.
+- Deduplica por URL y conserva procedencia. Dentro de cada día da prioridad a noticias técnicas con referencias a Perú/Latinoamérica en su contenido; esas referencias no garantizan que describan una implantación regional real. Mantiene también avances globales relevantes.
 - Descarga el HTML público, respeta `robots.txt` y extrae el cuerpo con Mozilla Readability. Elimina scripts, publicidad identificable, navegación y diálogos de cookies. No ejecuta JavaScript ni carga páginas dentro del lector.
 - Para DEV obtiene el cuerpo publicado desde su API pública de artículos, en lugar de utilizar la descripción breve del listado.
 - Guarda párrafos, títulos, listas, citas, código e imágenes del cuerpo con sus leyendas. Las tablas conservan encabezados y celdas combinadas y se muestran como cuadros con desplazamiento horizontal.
@@ -82,6 +84,8 @@ curl --fail-with-body -sS "https://andes-news.cmaquera.com/status" -H "Authoriza
 ```
 
 `collection` contiene el último ciclo y sus errores; `nextCollectionAt` es la próxima ejecución en milisegundos Unix, `counts` indica noticias por estado y `processing` indica si el trabajador está ocupado. La actualización 0.4 vuelve a poner una sola vez en la cola los artículos de texto de 0.3 para recuperar imágenes, tablas y videos. Conserva su lectura anterior y abstracto mientras espera; no elimina la base de datos.
+
+El backend 0.4.1 aplica el enfoque también a las noticias ya guardadas al iniciar: las irrelevantes salen del feed y de la cola con estado `filtered`, conservando su detalle para artículos guardados. `collection.filtered` cuenta candidatos descartados en el ciclo; `counts.filtered` cuenta artículos guardados descartados. El APK 0.4 ya instalado es compatible; basta redesplegar el backend y actualizar el feed.
 
 Las solicitudes a publicaciones se limitan a HTTP/HTTPS público con DNS comprobado y fijado a la conexión. Se rechazan direcciones privadas, redirecciones inseguras, HTML de más de 2 MB y documentos de más de 30000 elementos. Ollama es la única conexión interna intencionada.
 
