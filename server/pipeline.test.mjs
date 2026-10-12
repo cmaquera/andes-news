@@ -1,6 +1,5 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { Readable } from 'node:stream';
 import { extractHtml,ArticleExtractor } from './extract.mjs';
 import { Store } from './store.mjs';
 import { Collector,POLL_INTERVAL } from './collector.mjs';
@@ -63,17 +62,15 @@ test('Discovers every two hours, deduplicates and stores captured/translated art
   await collector.tick();assert.equal(calls,6);await collector.tick();assert.equal(calls,6);now+=POLL_INTERVAL;await collector.tick();assert.equal(calls,12);assert.equal(store.counts().queued,1);
   await collector.processOne();const stored=store.get(store.list()[0].id);assert.equal(stored.status,'ready');assert.ok(stored.contentText.includes('final paragraph'));assert.ok(stored.translatedContent.length);assert.equal(stored.abstract,'Resumen del cuerpo entero.');store.close();
 });
-function request(server,path,auth=`Bearer ${token}`){
-  return new Promise(resolve=>{
-    const req=Readable.from([]);Object.assign(req,{method:'GET',url:path,headers:{authorization:auth}});
-    server.emit('request',req,{status:0,writeHead(status){this.status=status;},end(body){resolve({status:this.status,data:JSON.parse(body)});}});
-  });
+async function request(server,path,auth=`Bearer ${token}`){
+  const response=await server.inject({method:'GET',url:path,headers:{authorization:auth}});
+  return {status:response.statusCode,data:response.json()};
 }
 test('API serves ready metadata and clean article detail, protected by token',async()=>{
   const store=new Store(':memory:'),a=store.discover(candidate).article;store.save({...a,abstract:'Resumen',content:[{type:'paragraph',text:'Original limpio'}],contentText:'Original limpio',status:'ready'},'ready');
   const api=createApi({store,apiToken:token});assert.equal((await request(api,'/articles','')).status,401);
   const feed=(await request(api,'/articles')).data;assert.equal(feed.articles[0].abstract,'Resumen');assert.equal(feed.articles[0].content,undefined);
-  assert.equal((await request(api,`/articles/${a.id}`)).data.article.content[0].text,'Original limpio');assert.equal((await request(api,'/articles/nope')).status,404);store.close();
+  assert.equal((await request(api,`/articles/${a.id}`)).data.article.content[0].text,'Original limpio');assert.equal((await request(api,'/articles/nope')).status,404);await api.close();store.close();
 });
 test('Database and interrupted jobs survive restart',()=>{
   const root=join(process.cwd(),'build');mkdirSync(root,{recursive:true});
