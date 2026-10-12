@@ -4,7 +4,7 @@ La app llama a la API pública de Andes. La versión 0.4 recopila fuentes cada d
 
 ## Actualizar desde versiones anteriores
 
-La versión 0.4.2 migra la API a Fastify 5. Redespliega `main` para reconstruir la imagen con las nuevas dependencias. Conserva `ANDES_API_TOKEN`, los puertos y el volumen `andes-cache`; no hay cambios de esquema de SQLite ni de acceso a Ollama. El APK 0.4 instalado sigue siendo compatible y no necesita reinstalarse. La ruta pública `/` mostrará `version: "0.4.2"` tras el despliegue.
+La versión 0.4.3 organiza el backend en `src`, `tests` y `scripts`, con Fastify 5. Redespliega `main` para reconstruir la imagen con el nuevo Dockerfile: copia `src` y `scripts` y arranca `node src/server.mjs`. Conserva `ANDES_API_TOKEN`, los puertos y el volumen `andes-cache`; no hay cambios de esquema de SQLite ni de acceso a Ollama. El APK 0.4 instalado sigue siendo compatible y no necesita reinstalarse. La ruta pública `/` mostrará `version: "0.4.3"` tras el despliegue.
 
 Para el filtro de desarrollo de software e IA del backend 0.4.1, redespliega `main` conservando el volumen y el token. El APK 0.4 es compatible y no requiere reinstalarse. Al arrancar, el servidor revisa las noticias existentes y aparta del feed/cola las irrelevantes sin borrar su detalle. Actualiza el feed del celular al terminar el despliegue.
 

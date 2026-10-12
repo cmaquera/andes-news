@@ -1,5 +1,5 @@
-*.test.mjs
-check_ollama.mjs
+tests
+build
 .env
 node_modules
 *.db*

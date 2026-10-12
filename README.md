@@ -1,6 +1,6 @@
 # Andes News
 
-Android en Flutter y backend de noticias de desarrollo de software e IA para Perú y Latinoamérica. Backend 0.4.2 con Fastify 5 y APK 0.4: el servidor recopila fuentes cada dos horas, recupera el cuerpo de los artículos, genera abstractos en español y conserva una lectura limpia con texto original, imágenes, tablas y traducción cuando hace falta.
+Android en Flutter y backend de noticias de desarrollo de software e IA para Perú y Latinoamérica. Backend 0.4.3 con Fastify 5 y APK 0.4: el servidor recopila fuentes cada dos horas, recupera el cuerpo de los artículos, genera abstractos en español y conserva una lectura limpia con texto original, imágenes, tablas y traducción cuando hace falta.
 
 ## Arquitectura
 
@@ -56,7 +56,7 @@ El APK queda en `build/app/outputs/flutter-apk/app-release.apk`. Se firma con la
 
 Sigue [server/DEPLOY.md](server/DEPLOY.md). Dokploy construye el backend Node.js 22 con sus dependencias desde `compose.yaml`. Mantén una sola instancia para compartir la cola y la base de datos con tu GPU.
 
-La API usa Fastify 5, con rutas declaradas y parámetros validados mediante JSON Schema. `server/app.mjs` configura Fastify, los errores, el arranque y el cierre; `server/api_auth.mjs` centraliza la autenticación; `server/api_routes.mjs` declara los endpoints. Las pruebas usan `fastify.inject()` y una conexión HTTP local. El registro de solicitudes oculta el encabezado de autorización. El procesamiento, SQLite y Ollama continúan en sus módulos existentes.
+La API usa Fastify 5, con rutas declaradas y parámetros validados mediante JSON Schema. `server/src/app.mjs` construye Fastify y `server/src/server.mjs` controla arranque y cierre. Las carpetas `config`, `routes`, `schemas`, `plugins`, `services`, `jobs` y `repositories` separan responsabilidades; `server/tests` contiene las pruebas y `server/scripts` las herramientas de diagnóstico. Consulta [la estructura y guía de mantenimiento](server/README.md). Las pruebas usan `fastify.inject()` y conexiones HTTP locales. El registro de solicitudes oculta el encabezado de autorización.
 
 ```dotenv
 ANDES_API_TOKEN=TU_TOKEN_ALEATORIO
@@ -67,7 +67,7 @@ OLLAMA_SERVICE_PORT=11434
 
 El contenedor llega al Ollama existente en Ubuntu por la red privada de Docker, no por un dominio público. Usa `qwen3:4b-instruct-2507-q4_K_M`, cuatro hilos de CPU y una inferencia a la vez. No instala ni descarga otro modelo.
 
-Para desarrollo local fuera de Docker configura el token y una ruta de SQLite dentro del proyecto antes de iniciar `node server/app.mjs`. Ollama se busca por defecto en `127.0.0.1:11434`.
+Para desarrollo local fuera de Docker configura el token y una ruta de SQLite dentro del proyecto antes de iniciar `npm.cmd start --prefix server` o `node server/src/server.mjs`. Ollama se busca por defecto en `127.0.0.1:11434`.
 
 ## API
 
@@ -79,7 +79,7 @@ Para desarrollo local fuera de Docker configura el token y una ruta de SQLite de
 
 Estas rutas de datos requieren `Authorization: Bearer TOKEN`. `/summary` devuelve 410: la versión anterior resumía extractos y fue sustituida por el procesamiento de artículos en segundo plano. Es necesario actualizar backend y APK juntos.
 
-La migración del backend 0.4.2 a Fastify es compatible con el APK 0.4 ya instalado: redespliega únicamente el backend. La paginación acepta enteros `limit` entre 1 y 200 y `offset` entre 0 y 100000; valores fuera de esos rangos o inválidos devuelven 400. Los IDs inexistentes o inválidos devuelven 404 y los errores internos devuelven un mensaje genérico, sin información de la base de datos.
+El backend 0.4.3 reorganizado es compatible con el APK 0.4 ya instalado: redespliega únicamente el backend. La paginación acepta enteros `limit` entre 1 y 200 y `offset` entre 0 y 100000; valores fuera de esos rangos o inválidos devuelven 400. Los IDs inexistentes o inválidos devuelven 404 y los errores internos devuelven un mensaje genérico, sin información de la base de datos.
 
 Para consultar el estado desde Ubuntu, sustituye únicamente `TU_API_KEY` por tu `ANDES_API_TOKEN`:
 
@@ -98,6 +98,7 @@ Las solicitudes a publicaciones se limitan a HTTP/HTTPS público con DNS comprob
 ```powershell
 npm.cmd ci --prefix server --ignore-scripts
 npm.cmd test --prefix server
+npm.cmd run format:check --prefix server
 flutter analyze
 flutter test
 ```
