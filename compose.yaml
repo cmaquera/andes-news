@@ -12,6 +12,8 @@ services:
       - "host.docker.internal:host-gateway"
     expose:
       - "${ANDES_PORT:-8787}"
+    ports:
+      - "${ANDES_BIND_IP:-127.0.0.1}:${ANDES_HOST_PORT:-8787}:${ANDES_PORT:-8787}"
     volumes:
       - andes-cache:/data
     networks:

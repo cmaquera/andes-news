@@ -15,7 +15,30 @@ ANDES_PORT=8787
 
 Genera el token en Ubuntu con `openssl rand -hex 32` y guárdalo en tu gestor de contraseñas. No lo incluyas en Git ni lo pegues en el chat. La app y Andes deben tener el mismo token.
 
-`ANDES_PORT` controla el puerto **dentro del contenedor** y su healthcheck. Si quieres usar 9090, define `ANDES_PORT=9090` y pon también **9090** en Domains de Dokploy. No hay publicación directa de puertos del contenedor al host: el acceso público pasa por el dominio HTTPS de Dokploy.
+`ANDES_PORT` controla el puerto **dentro del contenedor** y su healthcheck. Si quieres usar 9090, define `ANDES_PORT=9090` y pon también **9090** en Domains de Dokploy. El acceso público pasa por el dominio HTTPS de Dokploy.
+
+### Probar directamente desde la red local
+
+El Compose publica también el puerto en `127.0.0.1` del servidor por defecto. Para acceder desde otro equipo por la dirección de tu servidor, configura:
+
+```dotenv
+ANDES_BIND_IP=192.168.0.200
+ANDES_HOST_PORT=8787
+ANDES_PORT=8787
+```
+
+Vuelve a desplegar. Abre `http://192.168.0.200:8787/health`: debe devolver `{"status":"ok"}`. La raíz `http://192.168.0.200:8787/` devuelve información de la API; no es una página web de noticias. `ANDES_HOST_PORT` es el puerto del servidor y puede diferir de `ANDES_PORT`, el puerto del contenedor. La IP debe existir en Ubuntu y el puerto debe estar disponible.
+
+Esta publicación permite comprobar la API en la LAN. La app Android requiere el dominio HTTPS de Andes para usar el token fuera del emulador; no introduzcas la URL HTTP de prueba en el APK. El acceso público continúa mediante Dokploy. El healthcheck confirma la API, no la conexión con Ollama.
+
+Si después de desplegar no responde, ejecuta en Ubuntu:
+
+```bash
+sudo docker ps --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}'
+curl -i --connect-timeout 5 http://192.168.0.200:8787/health
+```
+
+Busca el contenedor de Andes y el mapeo `192.168.0.200:8787->8787/tcp`. Si el contenedor no está activo, revisa los logs de despliegue de Dokploy. Si responde en Ubuntu pero no desde otro equipo, revisa el acceso de red y las reglas de firewall.
 
 El Compose añade automáticamente el alias `host.docker.internal` hacia `host-gateway`, de forma que el contenedor encuentra Ubuntu sin una IP fija escrita en el proyecto. Estos valores opcionales ya tienen defaults:
 

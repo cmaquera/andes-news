@@ -57,6 +57,7 @@ export function createSummaryServer({ generate, apiToken = process.env.ANDES_API
   let active = false, requests = 0, resetAt = Date.now()+60000;
   const server = http.createServer(async (req,res) => {
     const send = (status,data) => {res.writeHead(status,{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'});res.end(JSON.stringify(data));};
+    if (req.method === 'GET' && req.url === '/') return send(200,{service:'Andes API',status:'ok',health:'/health'});
     if (req.method === 'GET' && req.url === '/health') return send(200,{status:'ok'});
     if (req.method !== 'POST' || req.url !== '/summary') return send(404,{error:'Not found'});
     if (!timingSafeEqual(digest(req.headers.authorization ?? ''),tokenHash)) return send(401,{error:'Unauthorized'});

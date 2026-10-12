@@ -31,6 +31,8 @@ test('Authenticates requests, persists cache and validates input',async()=>{
   const post=(data,auth)=>request(server,'POST','/summary',data,auth);
   try {
     assert.equal((await request(server,'GET','/health')).status,200);
+    const root=await request(server,'GET','/');
+    assert.equal(root.status,200);assert.equal(root.data.service,'Andes API');
     assert.equal((await post({title:'Python',excerpt:'release'},'Bearer wrong')).status,401);
     const data={title:'Python',excerpt:'Nueva versión'};
     const first=await post(data);assert.equal(first.data.titleEs,'Titular traducido');assert.equal(first.data.cached,false);
