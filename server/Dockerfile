@@ -4,5 +4,5 @@ WORKDIR /app
 COPY summary.mjs ./summary.mjs
 RUN mkdir /data && chown node:node /data
 USER node
-EXPOSE 8787
+# The listening/exposed port is configured by Compose through ANDES_PORT.
 CMD ["node", "summary.mjs"]

@@ -25,7 +25,7 @@ El APK queda en `build/app/outputs/flutter-apk/app-release.apk`. ARM64 cubre tel
 
 ## Activar resúmenes
 
-El feed funciona sin servidor. Para desplegar los resúmenes con tu Ollama en Dokploy, sigue [server/DEPLOY.md](server/DEPLOY.md). El servicio usa por defecto `https://ollama-qwen.cmaquera.com` y `qwen3:4b-instruct-2507-q4_K_M`. No instala ni descarga modelos. Node.js 22 o superior ejecuta el servicio sin dependencias adicionales.
+El feed funciona sin servidor. Para desplegar los resúmenes con tu Ollama en Dokploy, sigue [server/DEPLOY.md](server/DEPLOY.md). El contenedor llega a Ollama instalado en Ubuntu mediante `host.docker.internal:11434`, usando la red interna. No utiliza un dominio público ni una variable `OLLAMA_URL`. El modelo es `qwen3:4b-instruct-2507-q4_K_M`. No instala ni descarga modelos. Node.js 22 o superior ejecuta el servicio sin dependencias adicionales.
 
 ```powershell
 # Para desarrollo local: guarda el token en tu gestor de contraseñas.
@@ -33,7 +33,7 @@ $env:ANDES_API_TOKEN = [Convert]::ToHexString([System.Security.Cryptography.Rand
 node server/summary.mjs
 ```
 
-En el emulador Android, guarda `http://10.0.2.2:8787` y el token en Ajustes. En un teléfono físico, usa el dominio HTTPS del servicio de Andes y el mismo token. El servicio escucha por defecto solo en `127.0.0.1`; el contenedor usa `0.0.0.0`. El token protege Andes, pero no protege el dominio público directo de Ollama: la guía indica cómo pasar a una conexión privada.
+En desarrollo fuera de Docker, el servicio busca Ollama en `127.0.0.1:11434`. En el emulador Android, guarda `http://10.0.2.2:8787` y el token en Ajustes. En un teléfono físico, usa el dominio HTTPS del servicio de Andes y el mismo token. El contenedor usa `0.0.0.0` y un puerto interno configurable con `ANDES_PORT` (8787 por defecto); configura el mismo puerto en Domains de Dokploy. Ollama debe escuchar en la interfaz privada de Docker, siguiendo la guía, antes de retirar el dominio público anterior.
 
 Contrato: `POST /summary`, con encabezado `Authorization: Bearer TOKEN` y JSON `{ "title": "...", "excerpt": "..." }`, devuelve `{ "titleEs": "...", "summary": "...", "basis": "excerpt", "cached": false }`. `GET /health` confirma que el servicio está vivo, no prueba Ollama. El servicio limita entrada, peticiones y concurrencia. Conserva hasta 500 resúmenes durante siete días, persistidos si `CACHE_FILE` está configurado. El teléfono transmite únicamente el título y extracto seleccionados, además del token de acceso.
 

@@ -1,63 +1,99 @@
-# Desplegar Andes en Dokploy
+# Andes en Dokploy con Ollama privado en Ubuntu
 
-El APK 0.2 consulta un servicio de Andes (`POST /summary`). La URL de Ollama se configura únicamente en ese servicio. No pongas el dominio de Ollama en Ajustes del APK: sus rutas y respuestas son diferentes.
+La app llama a la API pública de Andes. El contenedor de Andes consulta al Ollama que ya tienes instalado en Ubuntu por la red interna. No se inicia un segundo Ollama ni se descargan otros modelos.
 
-## 1. Preparar el código
+## Variables y puerto configurable
 
-El paquete contiene `server/Dockerfile`, `server/summary.mjs` y `compose.yaml`. Sube esos archivos a un repositorio accesible para tu Dokploy. No subas archivos `.env` con secretos.
-
-## 2. Crear el servicio
-
-En Dokploy crea un proyecto o servicio **Docker Compose**, conecta el repositorio y selecciona `compose.yaml`. Usa el modo Docker Compose, no Stack: el archivo construye la imagen con `build`.
+Crea un servicio Docker Compose en Dokploy con el repositorio `cmaquera/andes-news`, rama `main` y archivo `compose.yaml`. Usa Docker Compose, no Stack, porque se construye la imagen con `build`.
 
 En Environment configura:
 
 ```dotenv
 ANDES_API_TOKEN=TU_TOKEN_ALEATORIO
-OLLAMA_URL=https://ollama-qwen.cmaquera.com
+ANDES_PORT=8787
 ```
 
-Genera el token en tu servidor y guárdalo en tu gestor de contraseñas:
+Genera el token en Ubuntu con `openssl rand -hex 32` y guárdalo en tu gestor de contraseñas. No lo incluyas en Git ni lo pegues en el chat. La app y Andes deben tener el mismo token.
+
+`ANDES_PORT` controla el puerto **dentro del contenedor** y su healthcheck. Si quieres usar 9090, define `ANDES_PORT=9090` y pon también **9090** en Domains de Dokploy. No hay publicación directa de puertos del contenedor al host: el acceso público pasa por el dominio HTTPS de Dokploy.
+
+El Compose añade automáticamente el alias `host.docker.internal` hacia `host-gateway`, de forma que el contenedor encuentra Ubuntu sin una IP fija escrita en el proyecto. Estos valores opcionales ya tienen defaults:
+
+```dotenv
+OLLAMA_SERVICE_HOST=host.docker.internal
+OLLAMA_SERVICE_PORT=11434
+```
+
+Elimina la variable antigua `OLLAMA_URL` de Dokploy. El servicio ya no la usa. Cambiar `ANDES_PORT` no cambia el puerto de Ollama.
+
+## Permitir acceso a Ollama desde Docker
+
+Ollama puede estar escuchando solo en `127.0.0.1`. Docker identifica el host, pero no puede acceder a un servicio que escucha únicamente en el loopback de Ubuntu. Configura Ollama para escuchar en la interfaz **privada de Docker**, sin abrirlo en todas las interfaces públicas.
+
+1. En Ubuntu consulta la dirección de la interfaz bridge de Docker:
+
+   ```bash
+   sudo docker network inspect bridge --format '{{(index .IPAM.Config 0).Gateway}}'
+   ```
+
+2. Edita la configuración del servicio:
+
+   ```bash
+   sudo systemctl edit ollama.service
+   ```
+
+   Añade lo siguiente, sustituyendo `172.17.0.1` por la dirección que obtuviste. Es una dirección de ejemplo, no asumas que coincide con tu servidor:
+
+   ```ini
+   [Service]
+   Environment="OLLAMA_HOST=172.17.0.1:11434"
+   After=docker.service
+   Wants=docker.service
+   ```
+
+   `OLLAMA_HOST` pertenece al proceso Ollama en Ubuntu. `OLLAMA_SERVICE_HOST` pertenece a Andes: son configuraciones distintas.
+
+3. Recarga y reinicia Ollama. Esto interrumpe brevemente las inferencias en curso:
+
+   ```bash
+   sudo systemctl daemon-reload
+   sudo systemctl restart ollama
+   sudo ss -lntp '( sport = :11434 )'
+   ```
+
+   Debe escuchar en la dirección privada elegida. No necesitas cambiar el modelo ni configurar el token de Andes en Ollama.
+
+   Para usar la CLI de Ollama en la misma sesión SSH después de cambiar la dirección, configura también `export OLLAMA_HOST=172.17.0.1:11434`, sustituyendo la IP real, antes de `ollama list` o `ollama ps`.
+
+## Desplegar y comprobar
+
+Despliega Andes. Se une a `dokploy-network` y guarda la caché en el volumen `andes-cache`.
+
+En la terminal del contenedor **andes-api** de Dokploy, comprueba la comunicación interna:
 
 ```bash
-openssl rand -hex 32
+node -e 'fetch("http://"+process.env.OLLAMA_SERVICE_HOST+":"+process.env.OLLAMA_SERVICE_PORT+"/api/tags").then(async r=>{if(!r.ok)throw Error("HTTP "+r.status);console.log(await r.text())}).catch(e=>{console.error(e.message);process.exit(1)})'
 ```
 
-El mismo token se introduce después en el APK. No lo pegues en el chat ni lo incluyas en Git. El servidor no arranca si no hay un token de al menos 32 caracteres. El modelo está fijado a `qwen3:4b-instruct-2507-q4_K_M` en Compose.
+Debe mostrar los modelos instalados, incluido `qwen3:4b-instruct-2507-q4_K_M`. Si falla, revisa el servicio Ollama, la dirección de escucha y las reglas de firewall para el tráfico privado de Docker. No abras 11434 a Internet. Si tu daemon usa un `host-gateway` personalizado, la dirección de escucha debe coincidir con ese gateway en lugar del bridge por defecto.
 
-Despliega. El contenedor se une a la red externa `dokploy-network`, expone internamente el puerto 8787 y conserva hasta 500 resultados durante siete días en el volumen `andes-cache`. No carga otro modelo: consulta el Ollama que ya tienes.
+En Domains configura un dominio HTTPS para **andes-api**, ruta `/` y el puerto elegido en `ANDES_PORT`. `https://TU_DOMINIO_DE_ANDES/health` devuelve `{"status":"ok"}`; esto confirma la vida de la API, no la disponibilidad del modelo.
 
-## 3. Configurar un dominio para Andes
+En el APK → Ajustes introduce ese dominio de Andes y el token. Abre una noticia y solicita su resumen. Una vez comprobado este recorrido, retira el dominio/proxy público de Ollama. Ollama continúa funcionando dentro del servidor.
 
-En Domains añade un subdominio que elijas para **el servicio andes-api**, puerto **8787**, ruta `/`, con HTTPS. Su DNS debe llegar a tu servidor. No configures otra vez el dominio público de Ollama para este servicio.
+## Si Ollama se mueve a otro contenedor en el futuro
 
-Comprueba `https://TU_DOMINIO_DE_ANDES/health`: devuelve `{"status":"ok"}`. Es una comprobación de vida del servicio, no una comprobación de que Ollama esté disponible. Sin token, una petición a `/summary` devuelve 401.
-
-## 4. Conectar el celular
-
-Instala el APK 0.2 y abre Ajustes:
-
-- URL del servicio de Andes: `https://TU_DOMINIO_DE_ANDES`.
-- Token de acceso: el valor que configuraste en Dokploy.
-- Guarda la conexión y abre una noticia → Resumir en español.
-
-La app guarda el token usando Flutter Secure Storage. No se incluye ninguna credencial en el APK. La traducción se muestra como título; el original sigue en Extracto original. Al volver al feed, las noticias procesadas muestran su titular en español. Los resultados del teléfono se conservan para lectura sin conexión.
-
-## 5. Restringir el acceso directo a Ollama
-
-El token de Andes **no protege** el dominio público de Ollama que ya existe. La configuración inicial lo usa porque comprobamos esa URL, pero antes de dejarlo funcionando de forma permanente conviene que Andes consulte Ollama por una dirección privada y retirar su exposición pública sin autenticación.
-
-Si Ollama está en un contenedor de la misma red, cambia `OLLAMA_URL` por `http://NOMBRE_DEL_SERVICIO_OLLAMA:11434`. Si se ejecuta directamente en Ubuntu, configura una ruta privada accesible desde la red Docker antes de retirar el dominio; `localhost` dentro de andes-api representa el propio contenedor, no Ubuntu. No cambies la URL a ciegas: primero comprueba la conectividad interna. El acceso móvil desde Wi-Fi y datos móviles seguirá pasando por el dominio HTTPS de Andes.
+Conecta ambos contenedores a `dokploy-network` y define `OLLAMA_SERVICE_HOST` con el nombre DNS del servicio Ollama, por ejemplo `ollama`, y `OLLAMA_SERVICE_PORT=11434`. No es necesario añadir un dominio público. El cambio actual usa el Ollama existente en Ubuntu; no descubre ni mueve otros servicios automáticamente.
 
 ## Límites y diagnóstico
 
-- Una inferencia simultánea para compartir la GTX 1650 con tus servicios. Si está ocupado devuelve 429 y la app permite reintentar.
-- Hasta 30 peticiones autenticadas por minuto; entrada limitada a titular de 500 caracteres y extracto de 1800.
-- Contexto 2048, salida hasta 300 tokens, cuatro hilos de CPU, modelo retenido diez minutos.
-- 401: revisar el token; 404: revisar el dominio/ruta de Andes; 503: verificar Ollama, el modelo y conectividad.
-- No se extrae el artículo completo. Sin extracto se traduce solo el título y se aclara la limitación.
-- No hay traducción automática de todo el feed todavía: cada noticia se procesa al solicitarla y se reutiliza desde caché.
+- `POST /summary` exige `Authorization: Bearer TOKEN`; el token se guarda de forma segura en Android.
+- Una inferencia simultánea, contexto 2048, máximo 300 tokens de salida, cuatro hilos de CPU y modelo retenido diez minutos.
+- Hasta 30 peticiones autenticadas por minuto; titular máximo de 500 caracteres y extracto de 1800.
+- Caché de hasta 500 resultados durante siete días, persistente entre reinicios del contenedor.
+- 401: token incorrecto; 404: dominio/ruta de Andes incorrectos; 429: modelo ocupado; 503: revisar conexión interna y modelo.
+- Sin extracto se traduce solo el titular; no se extrae el artículo completo.
 
-La prueba real desde el entorno de desarrollo contra Ollama obtuvo JSON válido en 6,94 segundos. La rapidez depende del texto, carga del servidor y estado del modelo. El despliegue en tu Dokploy y el acceso desde un teléfono físico están pendientes de verificar.
+El cambio de red se verificó con pruebas del servidor y validación del Compose. La conexión privada en tu Ubuntu debe comprobarse con los pasos anteriores; no se ha modificado remotamente tu servidor.
 
-Referencias: [Docker Compose en Dokploy](https://docs.dokploy.com/docs/core/docker-compose), [API de Ollama](https://docs.ollama.com/api/generate).
+Referencias: [host-gateway de Docker](https://docs.docker.com/reference/cli/docker/container/run/#add-entries-to-container-hosts-file---add-host), [variables de Ollama en Linux](https://docs.ollama.com/faq#setting-environment-variables-on-linux), [Docker Compose en Dokploy](https://docs.dokploy.com/docs/core/docker-compose).

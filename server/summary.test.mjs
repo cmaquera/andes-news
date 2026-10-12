@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { Readable } from 'node:stream';
 import { mkdtempSync, rmSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
-import { createSummaryServer, createOllamaGenerator } from './summary.mjs';
+import { createSummaryServer, createOllamaGenerator, ollamaEndpoint, parsePort } from './summary.mjs';
 const token='test-only-token-with-at-least-32-characters';
 function request(server,method,url,data,auth=`Bearer ${token}`) {
   return new Promise(resolve => {
@@ -13,6 +13,14 @@ function request(server,method,url,data,auth=`Bearer ${token}`) {
   });
 }
 test('Fails closed without a token',()=>assert.throws(()=>createSummaryServer({apiToken:''}),/ANDES_API_TOKEN/));
+test('Builds internal Ollama endpoints and rejects invalid ports or URLs',()=>{
+  assert.equal(ollamaEndpoint({host:'host.docker.internal',port:'11434'}),'http://host.docker.internal:11434');
+  assert.equal(ollamaEndpoint({host:'ollama',port:'12000'}),'http://ollama:12000');
+  assert.equal(ollamaEndpoint({host:'::1',port:'11434'}),'http://[::1]:11434');
+  assert.equal(parsePort('9090','PORT'),9090);
+  for(const port of ['0','65536','abc','-1','8787.5']) assert.throws(()=>parsePort(port,'PORT'));
+  assert.throws(()=>ollamaEndpoint({host:'https://example.com'}),/hostname or IP/);
+});
 test('Authenticates requests, persists cache and validates input',async()=>{
   let calls=0;
   mkdirSync(join(process.cwd(),'build'),{recursive:true});

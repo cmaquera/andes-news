@@ -4,16 +4,20 @@ services:
     restart: unless-stopped
     environment:
       ANDES_API_TOKEN: ${ANDES_API_TOKEN:?Define ANDES_API_TOKEN}
-      OLLAMA_URL: ${OLLAMA_URL:-https://ollama-qwen.cmaquera.com}
+      PORT: ${ANDES_PORT:-8787}
+      OLLAMA_SERVICE_HOST: ${OLLAMA_SERVICE_HOST:-host.docker.internal}
+      OLLAMA_SERVICE_PORT: ${OLLAMA_SERVICE_PORT:-11434}
       OLLAMA_MODEL: qwen3:4b-instruct-2507-q4_K_M
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     expose:
-      - "8787"
+      - "${ANDES_PORT:-8787}"
     volumes:
       - andes-cache:/data
     networks:
       - dokploy-network
     healthcheck:
-      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8787/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:'+process.env.PORT+'/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
       interval: 30s
       timeout: 5s
       retries: 3
