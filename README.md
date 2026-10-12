@@ -1,6 +1,6 @@
 # Andes News
 
-Android en Flutter y backend de noticias de programación y tecnología para Perú y Latinoamérica. Versión 0.3: el servidor recopila fuentes cada dos horas, recupera el cuerpo de los artículos, genera abstractos en español y conserva una lectura limpia con texto original y traducción cuando hace falta.
+Android en Flutter y backend de noticias de programación y tecnología para Perú y Latinoamérica. Versión 0.4: el servidor recopila fuentes cada dos horas, recupera el cuerpo de los artículos, genera abstractos en español y conserva una lectura limpia con texto original, imágenes, tablas y traducción cuando hace falta.
 
 ## Arquitectura
 
@@ -24,7 +24,8 @@ La app no consulta las fuentes ni ejecuta inferencias. Obtiene noticias y artíc
 - Deduplica por URL, conserva procedencia y prioriza fuentes de Perú/Latinoamérica dentro de cada día y temas técnicos.
 - Descarga el HTML público, respeta `robots.txt` y extrae el cuerpo con Mozilla Readability. Elimina scripts, publicidad identificable, navegación y diálogos de cookies. No ejecuta JavaScript ni carga páginas dentro del lector.
 - Para DEV obtiene el cuerpo publicado desde su API pública de artículos, en lugar de utilizar la descripción breve del listado.
-- Guarda párrafos, títulos, listas, citas y bloques de código. Las figuras, vídeos, PDF y páginas que requieren JavaScript no tienen representación completa en este lector de texto.
+- Guarda párrafos, títulos, listas, citas, código e imágenes del cuerpo con sus leyendas. Las tablas conservan encabezados y celdas combinadas y se muestran como cuadros con desplazamiento horizontal.
+- Conserva archivos de video directos recuperables (MP4, WebM o streams compatibles con Android), con reproducción nativa bajo demanda. Los embeds de YouTube y Vimeo se convierten en enlaces a su reproductor externo; no se descargan ni se eliminan anuncios del proveedor. PDF, DRM, reproductores personalizados y contenido cargado exclusivamente mediante JavaScript pueden no recuperarse.
 - Procesa **todas** las partes del texto recuperado con contexto de 2048 tokens. Combina notas de forma jerárquica y genera un abstracto de hasta 160 palabras y puntos clave. No usa el extracto del RSS para generar el abstracto.
 - Traduce el titular y el cuerpo cuando el idioma detectado no es español. Traduce por bloques y conserva intactos los bloques de código. La app permite alternar español/original.
 - Guarda resultados y caché de las inferencias en SQLite, en el volumen existente `andes-cache`. Conserva artículos y caché durante 60 días; recupera trabajos interrumpidos después de reiniciar.
@@ -37,6 +38,8 @@ La app no consulta las fuentes ni ejecuta inferencias. Obtiene noticias y artíc
 El dominio predeterminado es `https://andes-news.cmaquera.com`. En Ajustes introduce tu token `ANDES_API_TOKEN`; la URL se puede cambiar. El token se almacena con Flutter Secure Storage y no está incluido en el APK.
 
 El lector tiene Abstracto y Artículo limpio. El enlace original queda como acción secundaria explícita. Al guardar una noticia, intenta descargar su cuerpo; si no hay conexión o el servidor aún no lo preparó, conserva los datos disponibles. El contenido abierto se guarda en caché para lectura sin conexión.
+
+Imágenes y videos se cargan directamente desde URLs HTTPS de la fuente, sin enviarles el token de Andes. Se necesita conexión para cargarlos; no se guardan sus archivos en la caché persistente de lectura. La fuente puede bloquearlos o caducar la URL: en ese caso se muestra un aviso. La extracción conserva elementos del cuerpo detectado, no una copia exacta de la página.
 
 ```powershell
 flutter pub get
@@ -72,6 +75,14 @@ Para desarrollo local fuera de Docker configura el token y una ruta de SQLite de
 
 Estas rutas de datos requieren `Authorization: Bearer TOKEN`. `/summary` devuelve 410: la versión anterior resumía extractos y fue sustituida por el procesamiento de artículos en segundo plano. Es necesario actualizar backend y APK juntos.
 
+Para consultar el estado desde Ubuntu, sustituye únicamente `TU_API_KEY` por tu `ANDES_API_TOKEN`:
+
+```bash
+curl --fail-with-body -sS "https://andes-news.cmaquera.com/status" -H "Authorization: Bearer TU_API_KEY"
+```
+
+`collection` contiene el último ciclo y sus errores; `nextCollectionAt` es la próxima ejecución en milisegundos Unix, `counts` indica noticias por estado y `processing` indica si el trabajador está ocupado. La actualización 0.4 vuelve a poner una sola vez en la cola los artículos de texto de 0.3 para recuperar imágenes, tablas y videos. Conserva su lectura anterior y abstracto mientras espera; no elimina la base de datos.
+
 Las solicitudes a publicaciones se limitan a HTTP/HTTPS público con DNS comprobado y fijado a la conexión. Se rechazan direcciones privadas, redirecciones inseguras, HTML de más de 2 MB y documentos de más de 30000 elementos. Ollama es la única conexión interna intencionada.
 
 ## Verificación
@@ -85,7 +96,7 @@ flutter test
 
 Las pruebas cubren extracción limpia, contenido parcial, robots, bloqueo de direcciones privadas, procesamiento de todas las partes, persistencia/reanudación, recopilación cada dos horas durante inferencia, exclusión de trabajadores concurrentes, autenticación y lector original/traducido en pantalla pequeña.
 
-La extracción real se comprobó con un artículo de Genbeta de 509 palabras y un changelog de GitHub de 428 palabras. Las pruebas automáticas de inferencia usan respuestas simuladas; el procesamiento completo con tu GPU, el nuevo despliegue en Dokploy y la instalación en un teléfono físico deben verificarse al desplegar. No hay motor Docker activo en el entorno de desarrollo para construir localmente la imagen; el Compose sí se validó.
+La extracción real se comprobó con un artículo de Genbeta de 509 palabras y tres imágenes y un changelog de GitHub de 428 palabras. Las pruebas cubren además conservación/traducción de tablas con celdas combinadas, metadatos de videos y renderizado de tablas en pantalla pequeña. Las pruebas automáticas de inferencia usan respuestas simuladas; el procesamiento completo con tu GPU, la reproducción de videos en un teléfono físico y el nuevo despliegue en Dokploy deben verificarse al desplegar. No hay motor Docker activo en el entorno de desarrollo para construir localmente la imagen; el Compose sí se validó.
 
 ## Diseño y atribución
 

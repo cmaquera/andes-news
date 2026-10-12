@@ -944,7 +944,7 @@ class _FeedState extends State<FeedScreen> {
       const Divider(),
       const SizedBox(height: 12),
       const Text(
-        'Andes · Versión 0.3',
+        'Andes · Versión 0.4',
         style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
       ),
       const SizedBox(height: 8),

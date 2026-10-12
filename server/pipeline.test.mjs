@@ -27,6 +27,17 @@ test('RSS listings retain provenance and DEV retrieves the full published body',
   const article=await extractor.extract('https://dev.to/author/article',{sourceId:'dev',apiArticleId:123,title:'Article'});
   assert.equal(fetched,'https://dev.to/api/articles/123');assert.equal(article.extractionMethod,'forem-body-api');assert.ok(article.blocks.some(b=>b.type==='code'));
 });
+test('Preserves ordered images, captions, direct/provider videos and structured merged tables',async()=>{
+  const rich=body.replace('<h2>Technical details</h2>',`<figure><picture><img src="data:image/gif;base64,AA" data-src="/photo.webp" alt="Database diagram"></picture><figcaption>Photo credit</figcaption></figure><p>Before inline <img src="https://cdn.example.com/inline.jpg"> after inline.</p><video poster="/poster.jpg"><source src="/demo.mp4"></video><iframe src="https://www.youtube.com/embed/abcdefghijk"></iframe><iframe src="https://ads.example.com/ad"></iframe><img src="https://127.0.0.1/private"><img width="1" height="1" src="/pixel"><table><caption>Benchmarks</caption><tr><th rowspan="2">Engine</th><th colspan="2">Performance</th></tr><tr><th>Read</th><th>Write</th></tr><tr><td>ExampleDB</td><td>100</td><td>50</td></tr></table><h2>Technical details</h2>`);
+  const extracted=extractHtml(rich,candidate.url);
+  const image=extracted.blocks.find(b=>b.type==='image');assert.equal(image.url,'https://example.com/photo.webp');assert.equal(image.text,'Photo credit');assert.equal(image.alt,'Database diagram');
+  assert.ok(extracted.blocks.some(b=>b.text==='Before inline'));assert.ok(extracted.blocks.some(b=>b.text==='after inline.'));
+  assert.equal(extracted.blocks.filter(b=>b.type==='image').length,2);
+  const videos=extracted.blocks.filter(b=>b.type==='video');assert.equal(videos.length,2);assert.equal(videos[0].url,'https://example.com/demo.mp4');assert.equal(videos[0].provider,'direct');assert.equal(videos[1].provider,'YouTube');
+  const table=extracted.blocks.find(b=>b.type==='table');assert.equal(table.rows[0][0].rowSpan,2);assert.equal(table.rows[0][1].colSpan,2);assert.equal(table.rows[0][0].header,true);assert.ok(extracted.text.includes('ExampleDB | 100 | 50'));assert.ok(!extracted.text.includes('ANDESMEDIA'));
+  const model=new OllamaModel({fetchImpl:async(_,options)=>{const input=JSON.parse(JSON.parse(options.body).prompt);return {ok:true,json:async()=>({done:true,response:JSON.stringify({textEs:`ES ${input.text}`})})};}});
+  const translated=await model.translate([image,table,videos[0]]);assert.equal(translated[0].url,image.url);assert.equal(translated[0].alt,'ES Database diagram');assert.equal(translated[1].rows[0][1].colSpan,2);assert.equal(translated[1].rows[0][0].text,'ES Engine');assert.equal(translated[2].url,videos[0].url);
+});
 test('Blocks private and metadata addresses and honors robots denial',async()=>{
   for(const ip of ['127.0.0.1','192.168.0.200','10.0.0.1','169.254.169.254','::1','::ffff:127.0.0.1','fc00::1'])assert.equal(isPublicAddress(ip),false,ip);
   assert.equal(isPublicAddress('8.8.8.8'),true);assert.throws(()=>publicUrl('http://localhost/a'));assert.throws(()=>publicUrl('http://example.com:11434/a'));
@@ -80,4 +91,12 @@ test('Collection continues during inference and duplicate workers cannot overlap
   await collector.tick();const work=collector.processOne();await new Promise(resolve=>setImmediate(resolve));assert.equal(await collector.processOne(),false);
   now+=POLL_INTERVAL;await collector.tick();assert.equal(calls,12);
   release({titleEs:'Titular',abstract:'Abstracto completo',keyPoints:[]});await work;assert.equal(store.counts().ready,1);store.close();
+});
+test('Upgrade requeues text-only articles once without discarding existing readable text',()=>{
+  const root=join(process.cwd(),'build');mkdirSync(root,{recursive:true});const directory=mkdtempSync(join(root,'rich-upgrade-'));assert.ok(directory.startsWith(root+sep));
+  try{
+    const path=join(directory,'articles.db');let store=new Store(path);const a=store.discover(candidate).article;store.save({...a,contentText:'Original text',content:[{type:'paragraph',text:'Original text'}],abstract:'Existing summary'},'ready');store.close();
+    store=new Store(path);assert.equal(store.next().needsRichExtraction,true);assert.equal(store.next().abstract,'Existing summary');assert.equal(store.next().contentText,'Original text');store.save({...store.next(),extractionVersion:2,needsRichExtraction:false},'ready');store.close();
+    store=new Store(path);assert.equal(store.next(),null);store.close();
+  }finally{rmSync(directory,{recursive:true,force:true});}
 });

@@ -1,10 +1,10 @@
 # Andes en Dokploy con Ollama privado en Ubuntu
 
-La app llama a la API pública de Andes. La versión 0.3 recopila fuentes cada dos horas, recupera cuerpos de artículos y procesa abstractos y traducciones en una cola automática. El contenedor consulta al Ollama existente en Ubuntu por la red interna. No se inicia un segundo Ollama ni se descargan otros modelos.
+La app llama a la API pública de Andes. La versión 0.4 recopila fuentes cada dos horas, recupera cuerpos de artículos con imágenes, tablas y videos compatibles y procesa abstractos y traducciones en una cola automática. El contenedor consulta al Ollama existente en Ubuntu por la red interna. No se inicia un segundo Ollama ni se descargan otros modelos.
 
-## Actualizar desde la versión 0.2
+## Actualizar desde versiones anteriores
 
-Vuelve a desplegar desde `main`, construyendo la imagen nueva, e instala el APK 0.3. Conserva el token, las variables de puertos y el volumen `andes-cache`. El contenedor crea `/data/andes.db` para artículos, cola y caché. El antiguo `cache.json` de extractos no se reutiliza porque no corresponde al contenido completo.
+Vuelve a desplegar desde `main`, construyendo la imagen nueva, e instala el APK 0.4. Conserva el token, las variables de puertos y el volumen `andes-cache`. El contenedor crea `/data/andes.db` para artículos, cola y caché. El antiguo `cache.json` de 0.2 no se reutiliza porque no corresponde al contenido completo. Si vienes de 0.3, las noticias capturadas se ponen una sola vez en la cola para recuperar multimedia y tablas, conservando su lectura y abstracto mientras esperan. Este trabajo es progresivo; no borres el volumen.
 
 Usa una sola réplica. No borres el volumen al volver a desplegar: conserva los artículos y los trabajos pendientes.
 
@@ -112,9 +112,15 @@ Debe mostrar los modelos instalados, incluido `qwen3:4b-instruct-2507-q4_K_M`. S
 
 En Domains configura un dominio HTTPS para **andes-api**, ruta `/` y el puerto elegido en `ANDES_PORT`. `https://TU_DOMINIO_DE_ANDES/health` devuelve `{"status":"ok"}`; esto confirma la vida de la API, no la disponibilidad del modelo.
 
-En el APK 0.3 → Ajustes introduce ese dominio de Andes y el token. La URL predeterminada ya es `https://andes-news.cmaquera.com`. Abre una noticia preparada: su abstracto llega listo desde el backend y Artículo limpio permite leer original/traducción sin abrir la página del medio. Una vez comprobado este recorrido, retira el dominio/proxy público de Ollama. Ollama continúa funcionando dentro del servidor.
+En el APK 0.4 → Ajustes introduce ese dominio de Andes y el token. La URL predeterminada ya es `https://andes-news.cmaquera.com`. Abre una noticia preparada: su abstracto llega listo desde el backend y Artículo limpio permite leer original/traducción con imágenes y tablas sin abrir la página del medio. Los videos directos se reproducen bajo demanda; YouTube/Vimeo abren su reproductor externo. Una vez comprobado este recorrido, retira el dominio/proxy público de Ollama. Ollama continúa funcionando dentro del servidor.
 
 `GET /status`, con el token, muestra el último ciclo y los contadores `queued`, `processing`, `ready` y `unavailable`. `GET /articles`, también autenticado, entrega el feed. La raíz y `/health` siguen siendo públicos y solo indican que la API está activa. El endpoint `/summary` anterior devuelve 410.
+
+```bash
+curl --fail-with-body -sS "https://andes-news.cmaquera.com/status" -H "Authorization: Bearer TU_API_KEY"
+```
+
+Sustituye `TU_API_KEY` por el valor de `ANDES_API_TOKEN`. Si quieres formatear el JSON y tienes `jq`, añade `| jq`. En PowerShell usa `curl.exe` con los mismos argumentos.
 
 ## Si Ollama se mueve a otro contenedor en el futuro
 

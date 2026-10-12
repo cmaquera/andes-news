@@ -19,11 +19,65 @@ const sources = [
 ];
 
 class ContentBlock {
-  final String type, text;
-  const ContentBlock(this.type, this.text);
-  factory ContentBlock.fromJson(Map<String, dynamic> j) =>
-      ContentBlock(j['type'] ?? 'paragraph', j['text'] ?? '');
-  Map<String, dynamic> toJson() => {'type': type, 'text': text};
+  final String type, text, url, alt, poster, provider, caption;
+  final List<List<TableCellData>> rows;
+  const ContentBlock(
+    this.type,
+    this.text, {
+    this.url = '',
+    this.alt = '',
+    this.poster = '',
+    this.provider = '',
+    this.caption = '',
+    this.rows = const [],
+  });
+  factory ContentBlock.fromJson(Map<String, dynamic> j) => ContentBlock(
+    j['type'] ?? 'paragraph',
+    j['text'] ?? '',
+    url: j['url'] ?? '',
+    alt: j['alt'] ?? '',
+    poster: j['poster'] ?? '',
+    provider: j['provider'] ?? '',
+    caption: j['caption'] ?? '',
+    rows: (j['rows'] as List? ?? [])
+        .map((r) => (r as List).map((c) => TableCellData.fromJson(c)).toList())
+        .toList(),
+  );
+  Map<String, dynamic> toJson() => {
+    'type': type,
+    'text': text,
+    if (url.isNotEmpty) 'url': url,
+    if (alt.isNotEmpty) 'alt': alt,
+    if (poster.isNotEmpty) 'poster': poster,
+    if (provider.isNotEmpty) 'provider': provider,
+    if (caption.isNotEmpty) 'caption': caption,
+    if (rows.isNotEmpty)
+      'rows': rows.map((r) => r.map((c) => c.toJson()).toList()).toList(),
+  };
+}
+
+class TableCellData {
+  final String text;
+  final bool header;
+  final int colSpan, rowSpan;
+  const TableCellData(
+    this.text, {
+    this.header = false,
+    this.colSpan = 1,
+    this.rowSpan = 1,
+  });
+  factory TableCellData.fromJson(Map<String, dynamic> j) => TableCellData(
+    j['text'] ?? '',
+    header: j['header'] == true,
+    colSpan: (j['colSpan'] as int? ?? 1).clamp(1, 50),
+    rowSpan: (j['rowSpan'] as int? ?? 1).clamp(1, 200),
+  );
+  Map<String, dynamic> toJson() => {
+    'text': text,
+    'header': header,
+    'colSpan': colSpan,
+    'rowSpan': rowSpan,
+  };
 }
 
 class Article {

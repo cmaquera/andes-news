@@ -56,14 +56,20 @@ export class OllamaModel {
   }
   async translate(blocks){
     const translated=[];
+    const translateText=async text=>{
+      if(!text?.trim())return text||'';const texts=[];
+      for(const part of splitText(text)){
+        const result=await this.json('Traduce al español todo el texto recibido sin resumirlo ni omitir información. Conserva nombres propios, números, código y términos técnicos.',{text:part},{textEs:{type:'string'}},850);texts.push(result.textEs);
+      }return texts.join(' ');
+    };
     for(const block of blocks){
       if(block.type==='code'){translated.push(block);continue;}
-      const parts=splitText(block.text),texts=[];
-      for(const text of parts){
-        const result=await this.json('Traduce al español todo el texto recibido sin resumirlo ni omitir información. Conserva nombres propios, números, código y términos técnicos.',{text},{textEs:{type:'string'}},850);
-        texts.push(result.textEs);
+      if(block.type==='table'){
+        const rows=[];for(const row of block.rows){const cells=[];for(const cell of row)cells.push({...cell,text:await translateText(cell.text)});rows.push(cells);}
+        const caption=await translateText(block.caption);
+        translated.push({...block,rows,caption,text:[caption,...rows.map(r=>r.map(c=>c.text).join(' | '))].filter(Boolean).join('\n')});continue;
       }
-      translated.push({...block,text:texts.join(' ')});
+      translated.push({...block,text:await translateText(block.text),...(block.alt?{alt:await translateText(block.alt)}:{})});
     }
     return translated;
   }

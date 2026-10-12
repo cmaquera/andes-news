@@ -27,9 +27,9 @@ export class Collector {
     let article=this.store.next();if(!article)return false;
     this.processing=true;this.store.save(article,'processing');
     try{
-      if(!article.contentText){
+      if(!article.contentText||article.needsRichExtraction){
         const body=await this.extractor.extract(article.url,article);
-        article={...article,content:body.blocks,contentText:body.text,coverage:body.coverage,language:detectLanguage(body.blocks.filter(b=>b.type!=='code').map(b=>b.text).join('\n').slice(0,12000),body.language),author:body.author,wordCount:body.wordCount,fetchedAt:body.fetchedAt,extractionMethod:body.extractionMethod,resolvedUrl:body.resolvedUrl,imageUrl:body.imageUrl||article.imageUrl};
+        article={...article,content:body.blocks,contentText:body.text,translatedContent:[],needsRichExtraction:false,extractionVersion:body.extractionVersion,coverage:body.coverage,language:detectLanguage(body.blocks.filter(b=>b.type!=='code').map(b=>b.text).join('\n').slice(0,12000),body.language),author:body.author,wordCount:body.wordCount,fetchedAt:body.fetchedAt,extractionMethod:body.extractionMethod,resolvedUrl:body.resolvedUrl,imageUrl:body.imageUrl||article.imageUrl};
         this.store.save(article,'processing');
       }
       if(!article.abstract){article={...article,...await this.model.summarize(article.title,article.contentText)};this.store.save(article,'processing');}

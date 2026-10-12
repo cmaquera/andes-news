@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'news.dart';
+import 'article_media.dart';
 
 const _blue = Color(0xff08a9ee),
     _ink = Color(0xff13181b),
@@ -100,6 +101,11 @@ class _ReaderState extends State<ArticleScreen> {
   }
 
   Widget block(ContentBlock b) {
+    if (b.type == 'image') return ReaderImage(b);
+    if (b.type == 'video') {
+      return ReaderVideo(b, key: ValueKey('${b.url}:$spanish'));
+    }
+    if (b.type == 'table') return ReaderTable(b, fontSize: fontSize);
     if (b.type == 'code') {
       return Container(
         margin: const EdgeInsets.symmetric(vertical: 10),

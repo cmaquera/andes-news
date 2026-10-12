@@ -12,6 +12,9 @@ export class Store {
       CREATE TABLE IF NOT EXISTS model_cache(key TEXT PRIMARY KEY,result TEXT NOT NULL,created INTEGER NOT NULL);
       CREATE TABLE IF NOT EXISTS meta(key TEXT PRIMARY KEY,value TEXT NOT NULL);`);
     this.db.prepare("UPDATE articles SET state='queued',data=json_set(data,'$.status','queued') WHERE state='processing'").run();
+    // Upgrade existing text-only articles once, preserving their readable body
+    // and abstract while the worker retrieves rich content in the background.
+    this.db.prepare("UPDATE articles SET state='queued',attempts=0,retry_at=0,data=json_set(data,'$.status','queued','$.needsRichExtraction',json('true'),'$.richUpgradeScheduled',json('true')) WHERE json_extract(data,'$.contentText')<>'' AND COALESCE(json_extract(data,'$.extractionVersion'),0)<2 AND COALESCE(json_extract(data,'$.richUpgradeScheduled'),0)=0").run();
   }
   discover(candidate){
     const url=canonicalUrl(candidate.url),id=createHash('sha256').update(url).digest('hex').slice(0,32),now=Date.now();
