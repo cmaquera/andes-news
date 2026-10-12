@@ -1,0 +1,22 @@
+{
+  "name": "andes-news-backend",
+  "version": "0.3.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22.16.0"
+  },
+  "scripts": {
+    "start": "node app.mjs",
+    "test": "node --test *.test.mjs",
+    "collect": "node collect.mjs"
+  },
+  "dependencies": {
+    "@mozilla/readability": "^0.6.0",
+    "ipaddr.js": "^2.5.0",
+    "jsdom": "^29.1.1",
+    "robots-parser": "^3.0.1",
+    "rss-parser": "^3.13.0",
+    "undici": "^7.30.0"
+  }
+}

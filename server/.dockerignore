@@ -1,4 +1,6 @@
 *.test.mjs
 check_ollama.mjs
 .env
-*.json
+node_modules
+*.db*
+*.tmp

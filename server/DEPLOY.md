@@ -1,6 +1,16 @@
 # Andes en Dokploy con Ollama privado en Ubuntu
 
-La app llama a la API pública de Andes. El contenedor de Andes consulta al Ollama que ya tienes instalado en Ubuntu por la red interna. No se inicia un segundo Ollama ni se descargan otros modelos.
+La app llama a la API pública de Andes. La versión 0.3 recopila fuentes cada dos horas, recupera cuerpos de artículos y procesa abstractos y traducciones en una cola automática. El contenedor consulta al Ollama existente en Ubuntu por la red interna. No se inicia un segundo Ollama ni se descargan otros modelos.
+
+## Actualizar desde la versión 0.2
+
+Vuelve a desplegar desde `main`, construyendo la imagen nueva, e instala el APK 0.3. Conserva el token, las variables de puertos y el volumen `andes-cache`. El contenedor crea `/data/andes.db` para artículos, cola y caché. El antiguo `cache.json` de extractos no se reutiliza porque no corresponde al contenido completo.
+
+Usa una sola réplica. No borres el volumen al volver a desplegar: conserva los artículos y los trabajos pendientes.
+
+El primer arranque descubre hasta 20 candidatos de cada fuente y los procesa uno a la vez. El feed muestra los estados de espera y las noticias preparadas progresivamente. La traducción de artículos completos y sus abstractos puede tardar bastante más que las pruebas anteriores con textos de unas pocas líneas.
+
+Si falla la extracción o el modelo, se reintenta hasta tres veces con dos horas de espera entre intentos. Las partes de inferencia ya procesadas se reutilizan desde caché. Los fallos se registran en los logs y en el estado de la noticia.
 
 ## Variables y puerto configurable
 
@@ -102,7 +112,9 @@ Debe mostrar los modelos instalados, incluido `qwen3:4b-instruct-2507-q4_K_M`. S
 
 En Domains configura un dominio HTTPS para **andes-api**, ruta `/` y el puerto elegido en `ANDES_PORT`. `https://TU_DOMINIO_DE_ANDES/health` devuelve `{"status":"ok"}`; esto confirma la vida de la API, no la disponibilidad del modelo.
 
-En el APK → Ajustes introduce ese dominio de Andes y el token. Abre una noticia y solicita su resumen. Una vez comprobado este recorrido, retira el dominio/proxy público de Ollama. Ollama continúa funcionando dentro del servidor.
+En el APK 0.3 → Ajustes introduce ese dominio de Andes y el token. La URL predeterminada ya es `https://andes-news.cmaquera.com`. Abre una noticia preparada: su abstracto llega listo desde el backend y Artículo limpio permite leer original/traducción sin abrir la página del medio. Una vez comprobado este recorrido, retira el dominio/proxy público de Ollama. Ollama continúa funcionando dentro del servidor.
+
+`GET /status`, con el token, muestra el último ciclo y los contadores `queued`, `processing`, `ready` y `unavailable`. `GET /articles`, también autenticado, entrega el feed. La raíz y `/health` siguen siendo públicos y solo indican que la API está activa. El endpoint `/summary` anterior devuelve 410.
 
 ## Si Ollama se mueve a otro contenedor en el futuro
 
@@ -110,13 +122,13 @@ Conecta ambos contenedores a `dokploy-network` y define `OLLAMA_SERVICE_HOST` co
 
 ## Límites y diagnóstico
 
-- `POST /summary` exige `Authorization: Bearer TOKEN`; el token se guarda de forma segura en Android.
-- Una inferencia simultánea, contexto 2048, máximo 300 tokens de salida, cuatro hilos de CPU y modelo retenido diez minutos.
-- Hasta 30 peticiones autenticadas por minuto; titular máximo de 500 caracteres y extracto de 1800.
-- Caché de hasta 500 resultados durante siete días, persistente entre reinicios del contenedor.
-- 401: token incorrecto; 404: dominio/ruta de Andes incorrectos; 429: modelo ocupado; 503: revisar conexión interna y modelo.
-- Sin extracto se traduce solo el titular; no se extrae el artículo completo.
+- `GET /articles`, `/articles/:id`, `/sources` y `/status` exigen `Authorization: Bearer TOKEN`; el token se guarda de forma segura en Android.
+- Una inferencia simultánea, contexto 2048, notas por fragmentos, reducción jerárquica y traducción por bloques. Las respuestas largas permiten hasta 850 tokens de salida; cuatro hilos de CPU y modelo retenido diez minutos.
+- SQLite persistente, con artículos y caché conservados durante 60 días. La API no inicia inferencias por cada lectura.
+- Cuerpos públicos de hasta 2 MB de HTML y 30000 elementos. Respeta robots y rechaza direcciones privadas/redirecciones inseguras para las fuentes.
+- 401: token incorrecto; 404: ruta o noticia inexistente; 410 en `/summary`: actualizar el APK. Los fallos del modelo y las fuentes aparecen en los logs, `/status` y el estado de la noticia.
+- Si no se recupera un cuerpo suficiente, no se fabrica un abstracto con el extracto del RSS. Las restricciones detectadas se marcan como contenido parcial.
 
-El cambio de red se verificó con pruebas del servidor y validación del Compose. La conexión privada en tu Ubuntu debe comprobarse con los pasos anteriores; no se ha modificado remotamente tu servidor.
+El contenedor tiene límite de 768 MB de RAM y una CPU para la extracción y la API. Ollama continúa fuera del contenedor con su propia GPU/RAM. Las pruebas validan extracción, procesamiento completo por fragmentos, almacenamiento, programación y lector. La conexión privada y el procesamiento real en tu Ubuntu deben comprobarse al desplegar; no se ha modificado remotamente tu servidor.
 
 Referencias: [host-gateway de Docker](https://docs.docker.com/reference/cli/docker/container/run/#add-entries-to-container-hosts-file---add-host), [variables de Ollama en Linux](https://docs.ollama.com/faq#setting-environment-variables-on-linux), [Docker Compose en Dokploy](https://docs.dokploy.com/docs/core/docker-compose).

@@ -4,7 +4,10 @@ import 'dart:convert';
 import 'package:andes_news/news.dart';
 
 Future<void> main() async {
-  final service = NewsService();
+  final service = NewsService(
+    endpoint: Platform.environment['ANDES_ENDPOINT'] ?? defaultAndesEndpoint,
+    token: Platform.environment['ANDES_API_TOKEN'] ?? '',
+  );
   try {
     final result = await service.load(sources.map((s) => s.id).toSet());
     for (final s in sources) {

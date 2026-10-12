@@ -17,6 +17,9 @@ class PreviewService extends NewsService {
   @override
   Future<FeedResult> load(Set<String> enabled) async =>
       FeedResult(articles, {});
+  @override
+  Future<Article> detail(String id) async =>
+      articles.firstWhere((a) => a.id == id);
 }
 
 void main() {
@@ -82,5 +85,31 @@ void main() {
     await tester.tap(find.text('Ajustes'));
     await tester.pumpAndSettle();
     await capture('ajustes');
+    final bodyFile = File('build/preview-article.json');
+    if (bodyFile.existsSync()) {
+      final article = Article.fromJson(jsonDecode(bodyFile.readAsStringSync()));
+      final prefs = await SharedPreferences.getInstance();
+      await tester.pumpWidget(
+        RepaintBoundary(
+          key: key,
+          child: MaterialApp(
+            debugShowCheckedModeBanner: false,
+            theme: andesTheme(),
+            home: ArticleScreen(
+              article: article,
+              endpoint: defaultAndesEndpoint,
+              prefs: prefs,
+              isSaved: false,
+              onSave: (_) async {},
+              service: PreviewService([article]),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Artículo limpio'));
+      await tester.pumpAndSettle();
+      await capture('lector');
+    }
   });
 }

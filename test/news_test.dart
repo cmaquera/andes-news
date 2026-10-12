@@ -1,57 +1,76 @@
+import 'dart:convert';
+
 import 'package:flutter_test/flutter_test.dart';
-import 'package:andes_news/news.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
+import 'package:andes_news/news.dart';
 
 void main() {
-  test('RSS decodes HTML and timezone, preserves region and topic', () {
-    const s = NewsSource('gestion', 'Gestión', 'Perú', 'https://example.com');
-    final a = parseRss(
-      '<rss><channel><item><title>Python &amp; Perú</title><link>https://example.com/news</link><description><![CDATA[<p>Una actualización &amp; más</p>]]></description><pubDate>Mon, 12 Oct 2026 08:00:00 -0500</pubDate></item></channel></rss>',
-      s,
-    ).single;
-    expect(a.title, 'Python & Perú');
-    expect(a.excerpt, 'Una actualización & más');
-    expect(a.region, 'Perú');
-    expect(a.topic, 'Programación');
-    expect(a.published, DateTime.utc(2026, 10, 12, 13));
-  });
-  test('Atom supports namespaces and rejects unsafe links', () {
-    const s = NewsSource('github', 'GitHub', 'Global', 'https://example.com');
-    final items = parseRss(
-      '<feed xmlns="http://www.w3.org/2005/Atom"><entry><title>API release</title><link href="https://example.com/a"/><summary>New API</summary><published>2026-10-12T10:00:00Z</published></entry><entry><title>Bad</title><link href="javascript:bad"/></entry></feed>',
-      s,
-    );
-    expect(items.length, 1);
-    expect(items.single.url, 'https://example.com/a');
-  });
   test(
-    'Partial failure reports source error and preserves successful results',
+    'Loads prepared articles from Andes only, preserving translated abstract',
     () async {
-      final service = NewsService(
-        client: MockClient(
-          (request) async => request.url.host == 'gestion.pe'
-              ? http.Response('unavailable', 503)
-              : http.Response(
-                  '<rss><channel><item><title>Python release</title><link>https://example.com/a</link></item></channel></rss>',
-                  200,
-                ),
-        ),
-      );
-      final result = await service.load({'gestion', 'genbeta'});
-      expect(result.articles.length, 1);
-      expect(result.errors.keys, ['gestion']);
+      final client = MockClient((r) async {
+        expect(r.url.host, 'andes-news.cmaquera.com');
+        expect(r.url.path, '/articles');
+        expect(r.headers['Authorization'], 'Bearer ${'x' * 32}');
+        return http.Response(
+          jsonEncode({
+            'articles': [
+              {
+                'id': 'a' * 32,
+                'title': 'English original',
+                'titleEs': 'Titular español',
+                'url': 'https://example.com/a',
+                'sourceId': 'hn',
+                'region': 'Global',
+                'topic': 'Programación',
+                'abstract': 'Abstracto completo.',
+                'status': 'ready',
+                'coverage': 'extracted',
+              },
+            ],
+            'collection': null,
+            'counts': {'ready': 1},
+          }),
+          200,
+          headers: {'content-type': 'application/json; charset=utf-8'},
+        );
+      });
+      final result = await NewsService(
+        client: client,
+        token: 'x' * 32,
+      ).load({'hn'});
+      expect(result.error, isNull);
+      expect(result.articles.single.displayTitle, 'Titular español');
+      expect(result.articles.single.abstract, 'Abstracto completo.');
     },
   );
-  test('Different discussion URLs are not deduplicated', () async {
-    final service = NewsService(
-      client: MockClient(
-        (r) async => http.Response(
-          '<rss><channel><item><title>API one</title><link>https://example.com/item?id=1</link></item><item><title>API two</title><link>https://example.com/item?id=2</link></item></channel></rss>',
-          200,
-        ),
-      ),
+  test(
+    'Token/network errors are surfaced so the app retains offline cache',
+    () async {
+      final service = NewsService(
+        client: MockClient((r) async => http.Response('{}', 401)),
+        token: 'x' * 32,
+      );
+      expect((await service.load({'hn'})).error, contains('token'));
+      expect(validAndesEndpoint('http://192.168.0.200:8787'), false);
+      expect(validAndesEndpoint('https://secret@api.example.com'), false);
+    },
+  );
+  test('Clean body and translation survive cache roundtrip', () {
+    const article = Article(
+      id: 'test',
+      title: 'Original',
+      url: 'https://example.com',
+      sourceId: 'hn',
+      region: 'Global',
+      topic: 'Programación',
+      abstract: 'Abstracto',
+      content: [ContentBlock('code', 'print("hello")')],
+      translatedContent: [ContentBlock('paragraph', 'Texto español')],
     );
-    expect((await service.load({'genbeta'})).articles.length, 2);
+    final restored = Article.fromJson(article.toJson());
+    expect(restored.content.single.text, 'print("hello")');
+    expect(restored.translatedContent.single.text, 'Texto español');
   });
 }

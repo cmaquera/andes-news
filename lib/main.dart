@@ -6,7 +6,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'news.dart';
-import 'summary.dart';
+import 'reader.dart';
+export 'reader.dart';
 
 const ink = Color(0xff13181b),
     blue = Color(0xff08a9ee),
@@ -14,7 +15,6 @@ const ink = Color(0xff13181b),
     pale = Color(0xfff0faff);
 // Retained for callers of the first version's theme.
 const green = blue;
-String summaryKey(Article a) => 'summary:v2:${a.id}:${a.title}:${a.excerpt}';
 void main() => runApp(const AndesApp());
 ThemeData andesTheme() => ThemeData(
   useMaterial3: true,
@@ -98,6 +98,8 @@ class _FeedState extends State<FeedScreen> {
   List<Article> articles = [];
   Map<String, Article> saved = {};
   Map<String, String> errors = {};
+  String? feedError;
+  Map<String, dynamic> pipelineCounts = {};
   Set<String> enabled = sources.map((s) => s.id).toSet();
   String region = 'Todas',
       topic = 'Todo',
@@ -137,7 +139,7 @@ class _FeedState extends State<FeedScreen> {
       saved = {};
     }
     enabled = (prefs!.getStringList('sources') ?? enabled.toList()).toSet();
-    endpoint = prefs!.getString('summaryEndpoint') ?? '';
+    endpoint = prefs!.getString('summaryEndpoint') ?? defaultAndesEndpoint;
     try {
       token = await secure.read(key: 'andesApiToken') ?? '';
     } catch (_) {
@@ -145,6 +147,7 @@ class _FeedState extends State<FeedScreen> {
     }
     endpointInput.text = endpoint;
     tokenInput.text = token;
+    service.configure(endpoint, token);
     updated = DateTime.tryParse(prefs!.getString('updated') ?? '');
     if (!mounted) return;
     setState(() {});
@@ -155,12 +158,8 @@ class _FeedState extends State<FeedScreen> {
     if (prefs == null || !mounted) return;
     setState(() => loading = true);
     final result = await service.load(enabled);
-    final kept = articles.where(
-      (a) =>
-          enabled.contains(a.sourceId) && result.errors.containsKey(a.sourceId),
-    );
-    final merged = [...result.articles, ...kept];
-    if (result.articles.isNotEmpty) updated = DateTime.now().toUtc();
+    final merged = result.error == null ? result.articles : articles;
+    if (result.collectedAt != null) updated = result.collectedAt;
     await prefs!.setString(
       'feed',
       jsonEncode(merged.map((a) => a.toJson()).toList()),
@@ -172,16 +171,32 @@ class _FeedState extends State<FeedScreen> {
     setState(() {
       articles = merged;
       errors = result.errors;
+      feedError = result.error;
+      pipelineCounts = result.counts;
       loading = false;
     });
   }
 
   Future<void> toggleSaved(Article a) async {
+    Article snapshot = a;
+    if (!saved.containsKey(a.id) && a.content.isEmpty) {
+      try {
+        final local = prefs?.getString('article:v3:${a.id}');
+        snapshot = local == null
+            ? await service.detail(a.id)
+            : Article.fromJson(jsonDecode(local));
+      } catch (_) {
+        notice(
+          'Guardamos la noticia. Abre la lectura con conexión para descargar el contenido completo.',
+        );
+      }
+      if (!mounted) return;
+    }
     setState(() {
       if (saved.containsKey(a.id)) {
         saved.remove(a.id);
       } else {
-        saved[a.id] = a;
+        saved[a.id] = snapshot;
       }
     });
     await prefs?.setString(
@@ -190,16 +205,8 @@ class _FeedState extends State<FeedScreen> {
     );
   }
 
-  NewsSummary? cachedSummary(Article a) {
-    try {
-      final raw = prefs?.getString(summaryKey(a));
-      return raw == null ? null : NewsSummary.fromJson(jsonDecode(raw));
-    } catch (_) {
-      return null;
-    }
-  }
-
-  String displayTitle(Article a) => cachedSummary(a)?.titleEs ?? a.title;
+  String? cachedSummary(Article a) => a.abstract.isEmpty ? null : a.abstract;
+  String displayTitle(Article a) => a.displayTitle;
   List<Article> get visible => (tab == 2 ? saved.values : articles)
       .where(
         (a) =>
@@ -222,7 +229,7 @@ class _FeedState extends State<FeedScreen> {
           token: token,
           prefs: prefs!,
           isSaved: saved.containsKey(a.id),
-          onSave: () => toggleSaved(a),
+          onSave: (value) => toggleSaved(value),
         ),
       ),
     );
@@ -394,6 +401,19 @@ class _FeedState extends State<FeedScreen> {
           if (loading)
             const SliverToBoxAdapter(
               child: LinearProgressIndicator(minHeight: 2),
+            ),
+          if (feedError != null && tab != 2)
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
+                child: Text(
+                  feedError!,
+                  style: const TextStyle(
+                    color: Color(0xff976400),
+                    fontSize: 12,
+                  ),
+                ),
+              ),
             ),
           if (errors.isNotEmpty && tab != 2)
             SliverToBoxAdapter(
@@ -780,6 +800,13 @@ class _FeedState extends State<FeedScreen> {
                   'Resumen en español',
                   style: TextStyle(fontSize: 10, color: blue),
                 ),
+              if (a.abstract.isEmpty)
+                Text(
+                  a.status == 'unavailable'
+                      ? 'Texto no disponible'
+                      : 'Procesando en el servidor',
+                  style: const TextStyle(fontSize: 10, color: muted),
+                ),
             ],
           ),
           const SizedBox(height: 14),
@@ -790,7 +817,7 @@ class _FeedState extends State<FeedScreen> {
   );
   Future<void> saveConfig() async {
     final value = endpointInput.text.trim(), newToken = tokenInput.text.trim();
-    if (value.isNotEmpty && !validSummaryEndpoint(value)) {
+    if (value.isNotEmpty && !validAndesEndpoint(value)) {
       notice('Usa una URL HTTPS sin credenciales del servicio de Andes.');
       return;
     }
@@ -804,7 +831,9 @@ class _FeedState extends State<FeedScreen> {
       await prefs!.setString('summaryEndpoint', value);
       endpoint = value;
       token = newToken;
+      service.configure(endpoint, token);
       notice('Servicio guardado.');
+      await refresh();
     } catch (_) {
       notice('No se pudo guardar el acceso en el teléfono.');
     }
@@ -817,12 +846,12 @@ class _FeedState extends State<FeedScreen> {
       Text('Tu espacio', style: Theme.of(context).textTheme.headlineLarge),
       const SizedBox(height: 8),
       const Text(
-        'Personaliza las fuentes y conecta tus resúmenes.',
+        'Conecta el backend y elige las fuentes que quieres ver.',
         style: TextStyle(color: muted, fontSize: 13),
       ),
       const SizedBox(height: 24),
       const Text(
-        'RESÚMENES EN ESPAÑOL',
+        'CONEXIÓN CON ANDES',
         style: TextStyle(
           fontSize: 11,
           fontWeight: FontWeight.w700,
@@ -832,7 +861,7 @@ class _FeedState extends State<FeedScreen> {
       ),
       const SizedBox(height: 12),
       const Text(
-        'Titulares traducidos y una síntesis breve, generados por tu modelo local.',
+        'El servidor recoge noticias cada dos horas, extrae su contenido y prepara abstractos y traducciones.',
         style: TextStyle(height: 1.5),
       ),
       const SizedBox(height: 16),
@@ -864,7 +893,7 @@ class _FeedState extends State<FeedScreen> {
       ),
       const SizedBox(height: 10),
       const Text(
-        'El token se guarda en el almacenamiento seguro del teléfono. El resumen utiliza el extracto disponible; abre la fuente para leer el artículo completo.',
+        'El token se guarda de forma segura. La app recibe los resultados ya preparados y ofrece lectura limpia del contenido recuperado.',
         style: TextStyle(color: muted, fontSize: 12, height: 1.5),
       ),
       const SizedBox(height: 28),
@@ -908,14 +937,14 @@ class _FeedState extends State<FeedScreen> {
       ),
       const SizedBox(height: 20),
       const Text(
-        'La región indica el origen de la fuente. Las noticias se actualizan al abrir la app o deslizar el feed.',
+        'La región indica el origen de la fuente. Deslizar el feed consulta los resultados del servidor; la recopilación se ejecuta cada dos horas aunque la app esté cerrada.',
         style: TextStyle(fontSize: 12, color: muted, height: 1.5),
       ),
       const SizedBox(height: 18),
       const Divider(),
       const SizedBox(height: 12),
       const Text(
-        'Andes · Versión 0.2',
+        'Andes · Versión 0.3',
         style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
       ),
       const SizedBox(height: 8),
@@ -1062,298 +1091,4 @@ class ArticleArtwork extends StatelessWidget {
                 progress == null ? child : placeholder(),
           ),
   );
-}
-
-class ArticleScreen extends StatefulWidget {
-  final Article article;
-  final String endpoint, token;
-  final SharedPreferences prefs;
-  final bool isSaved;
-  final Future<void> Function() onSave;
-  final SummaryService? service;
-  const ArticleScreen({
-    super.key,
-    required this.article,
-    required this.endpoint,
-    this.token = '',
-    required this.prefs,
-    required this.isSaved,
-    required this.onSave,
-    this.service,
-  });
-  @override
-  State<ArticleScreen> createState() => _ArticleState();
-}
-
-class _ArticleState extends State<ArticleScreen> {
-  late final service = widget.service ?? SummaryService();
-  NewsSummary? result;
-  String? error;
-  bool busy = false, saved = false;
-  @override
-  void initState() {
-    super.initState();
-    saved = widget.isSaved;
-    try {
-      final raw = widget.prefs.getString(summaryKey(widget.article));
-      if (raw != null) result = NewsSummary.fromJson(jsonDecode(raw));
-    } catch (_) {}
-  }
-
-  @override
-  void dispose() {
-    service.client.close();
-    super.dispose();
-  }
-
-  Future<void> summarize() async {
-    if (widget.endpoint.isEmpty) {
-      setState(
-        () => error = 'Configura el servicio de Andes en Ajustes. El extracto original está disponible abajo.',
-      );
-      return;
-    }
-    setState(() {
-      busy = true;
-      error = null;
-    });
-    try {
-      final generated = await service.generate(
-        widget.article,
-        widget.endpoint,
-        widget.token,
-      );
-      await widget.prefs.setString(
-        summaryKey(widget.article),
-        jsonEncode(generated.toJson()),
-      );
-      if (mounted) setState(() => result = generated);
-    } catch (e) {
-      if (mounted) {
-        setState(
-          () => error = e is SummaryException ? e.message : 'No se pudo conectar. Comprueba tu conexión y vuelve a intentarlo.',
-        );
-      }
-    }
-    if (mounted) setState(() => busy = false);
-  }
-
-  Future<void> openSource() async {
-    try {
-      if (await launchUrl(
-        Uri.parse(widget.article.url),
-        mode: LaunchMode.externalApplication,
-      )) {
-        return;
-      }
-    } catch (_) {}
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No se pudo abrir la fuente.')),
-      );
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final a = widget.article;
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text(
-          'Lectura',
-          style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600),
-        ),
-        actions: [
-          IconButton(
-            tooltip: 'Guardar noticia',
-            onPressed: () async {
-              await widget.onSave();
-              if (mounted) setState(() => saved = !saved);
-            },
-            icon: Icon(
-              saved ? Icons.bookmark : Icons.bookmark_border,
-              color: saved ? blue : ink,
-            ),
-          ),
-        ],
-      ),
-      body: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 760),
-          child: ListView(
-            padding: const EdgeInsets.fromLTRB(20, 10, 20, 30),
-            children: [
-              Row(
-                children: [
-                  SourceBadge(a.sourceId, size: 32),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          a.sourceName,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w600,
-                            fontSize: 13,
-                          ),
-                        ),
-                        Text(
-                          a.region,
-                          style: const TextStyle(color: muted, fontSize: 11),
-                        ),
-                      ],
-                    ),
-                  ),
-                  topicTag(a.topic),
-                ],
-              ),
-              const SizedBox(height: 20),
-              Text(
-                result?.titleEs ?? a.title,
-                style: const TextStyle(
-                  fontSize: 26,
-                  fontWeight: FontWeight.w700,
-                  height: 1.3,
-                  color: ink,
-                  letterSpacing: -.5,
-                ),
-              ),
-              const SizedBox(height: 12),
-              Text(
-                a.published == null
-                    ? 'Fecha no disponible'
-                    : stamp(a.published!),
-                style: const TextStyle(color: muted, fontSize: 11),
-              ),
-              const SizedBox(height: 20),
-              SizedBox(
-                height: 205,
-                child: ArticleArtwork(article: a, borderRadius: 12),
-              ),
-              const SizedBox(height: 24),
-              Container(
-                padding: const EdgeInsets.all(18),
-                decoration: BoxDecoration(
-                  color: pale,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Row(
-                      children: [
-                        Icon(Icons.auto_awesome, color: blue, size: 20),
-                        SizedBox(width: 9),
-                        Expanded(
-                          child: Text(
-                            'En pocas palabras',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      result?.summary ?? 'El titular y lo esencial de esta noticia, en español.',
-                      style: const TextStyle(fontSize: 14, height: 1.65),
-                    ),
-                    const SizedBox(height: 10),
-                    Text(
-                      (result?.basis ??
-                                  (a.excerpt.isEmpty ? 'title' : 'excerpt')) ==
-                              'title'
-                          ? 'Solo hay un titular: no es un resumen del artículo completo.'
-                          : 'Resumen generado por IA a partir del extracto. Verifica los detalles en la fuente.',
-                      style: const TextStyle(
-                        color: muted,
-                        fontSize: 11,
-                        height: 1.5,
-                      ),
-                    ),
-                    if (result == null)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 14),
-                        child: FilledButton.icon(
-                          onPressed: busy ? null : summarize,
-                          icon: busy
-                              ? const SizedBox(
-                                  width: 16,
-                                  height: 16,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                  ),
-                                )
-                              : const Icon(Icons.translate, size: 18),
-                          label: Text(
-                            busy
-                                ? 'Preparando…'
-                                : a.excerpt.isEmpty
-                                ? 'Traducir titular'
-                                : 'Resumir en español',
-                          ),
-                        ),
-                      ),
-                    if (error != null)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 12),
-                        child: Text(
-                          error!,
-                          style: const TextStyle(
-                            color: Color(0xff996100),
-                            fontSize: 12,
-                            height: 1.5,
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 26),
-              const Text(
-                'Extracto original',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
-              ),
-              const SizedBox(height: 12),
-              if (result != null) ...[
-                SelectableText(
-                  a.title,
-                  style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                    height: 1.5,
-                  ),
-                ),
-                const SizedBox(height: 10),
-              ],
-              SelectableText(
-                a.excerpt.isEmpty
-                    ? 'La fuente no ofrece un extracto. Abre la publicación para leerla completa.'
-                    : a.excerpt,
-                style: const TextStyle(
-                  fontSize: 15,
-                  height: 1.7,
-                  color: Color(0xff4e5b65),
-                ),
-              ),
-              const SizedBox(height: 26),
-              FilledButton.icon(
-                onPressed: openSource,
-                icon: const Icon(Icons.open_in_new, size: 18),
-                label: const Text('Leer en la fuente original'),
-              ),
-              const SizedBox(height: 12),
-              SelectableText(
-                a.url,
-                style: const TextStyle(fontSize: 11, color: muted),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
 }
