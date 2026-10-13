@@ -9,7 +9,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:andes_news/article_media.dart';
 import 'package:andes_news/news.dart';
 
-const table = ContentBlock(
+final table = ContentBlock(
   'table',
   'Benchmarks',
   caption: 'Resultados',
@@ -29,13 +29,13 @@ void main() {
   test('Media metadata and table spans survive offline serialization', () {
     final blocks = [
       table,
-      const ContentBlock(
+      ContentBlock(
         'image',
         'Crédito',
         url: 'https://cdn.example.com/photo.webp',
         alt: 'Diagrama',
       ),
-      const ContentBlock(
+      ContentBlock(
         'video',
         'Demostración',
         url: 'https://cdn.example.com/demo.mp4',
@@ -83,7 +83,7 @@ void main() {
       await tester.pumpWidget(
         RepaintBoundary(
           key: boundaryKey,
-          child: const MaterialApp(
+          child: MaterialApp(
             home: Scaffold(
               body: Padding(
                 padding: EdgeInsets.all(22),
@@ -129,7 +129,7 @@ void main() {
     'Direct video waits for an explicit play; providers expose video link',
     (tester) async {
       await tester.pumpWidget(
-        const MaterialApp(
+        MaterialApp(
           home: Scaffold(
             body: Column(
               children: [

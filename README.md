@@ -1,6 +1,6 @@
 # Andes News
 
-Android en Flutter y backend de noticias de desarrollo de software e IA para Perú y Latinoamérica. Backend 0.4.3 con Fastify 5 y APK 0.4: el servidor recopila fuentes cada dos horas, recupera el cuerpo de los artículos, genera abstractos en español y conserva una lectura limpia con texto original, imágenes, tablas y traducción cuando hace falta.
+Android en Flutter y backend de noticias de desarrollo de software e IA para Perú y Latinoamérica. Backend 0.4.3 con Fastify 5 y APK 0.5: el servidor recopila fuentes cada dos horas, recupera el cuerpo de los artículos, genera abstractos en español y conserva una lectura limpia con texto original, imágenes, tablas y traducción cuando hace falta.
 
 ## Arquitectura
 
@@ -36,6 +36,8 @@ La app no consulta las fuentes ni ejecuta inferencias. Obtiene noticias y artíc
 `extracted` indica cuerpo recuperado por el extractor, no una garantía editorial de que la página entregó cada elemento del artículo. `partial` señala restricciones detectadas de la fuente. Los errores de acceso, robots, contenido insuficiente o formatos no soportados se registran; se reintenta hasta tres veces y nunca se inventa un artículo completo a partir del titular. Los abstractos y traducciones siguen siendo resultados de IA y pueden contener errores.
 
 ## Android
+
+La versión 0.5 organiza Flutter por funcionalidades, con Riverpod, controladores MVVM, repositorios y modelos inmutables. Consulta [la arquitectura y guía de mantenimiento de Android](docs/flutter_architecture.md). La actualización conserva guardados, contenido en caché, fuentes y el token existente; no requiere actualizar el backend 0.4.3 ni cambiar sus credenciales.
 
 El dominio predeterminado es `https://andes-news.cmaquera.com`. En Ajustes introduce tu token `ANDES_API_TOKEN`; la URL se puede cambiar. El token se almacena con Flutter Secure Storage y no está incluido en el APK.
 

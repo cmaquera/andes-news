@@ -1,3 +1,6 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:andes_news/app/providers.dart';
+
 import 'dart:convert';
 import 'dart:io';
 import 'dart:ui' as ui;
@@ -88,20 +91,19 @@ void main() {
     final bodyFile = File('build/preview-article.json');
     if (bodyFile.existsSync()) {
       final article = Article.fromJson(jsonDecode(bodyFile.readAsStringSync()));
-      final prefs = await SharedPreferences.getInstance();
       await tester.pumpWidget(
         RepaintBoundary(
           key: key,
           child: MaterialApp(
             debugShowCheckedModeBanner: false,
             theme: andesTheme(),
-            home: ArticleScreen(
-              article: article,
-              endpoint: defaultAndesEndpoint,
-              prefs: prefs,
-              isSaved: false,
-              onSave: (_) async {},
-              service: PreviewService([article]),
+            home: ProviderScope(
+              overrides: [
+                newsServiceProvider.overrideWithValue(
+                  PreviewService([article]),
+                ),
+              ],
+              child: ArticleScreen(article: article),
             ),
           ),
         ),

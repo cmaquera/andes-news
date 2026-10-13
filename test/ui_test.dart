@@ -1,3 +1,5 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:andes_news/app/providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -5,7 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:andes_news/main.dart';
 import 'package:andes_news/news.dart';
 
-const fixture = Article(
+final fixture = Article(
   id: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
   title: 'Original article title',
   titleEs: 'Titular en español',
@@ -40,6 +42,7 @@ void main() {
   testWidgets(
     'Prepared abstract and full clean reader work without browser or model call',
     (tester) async {
+      FlutterSecureStorage.setMockInitialValues({});
       SharedPreferences.setMockInitialValues({});
       final prefs = await SharedPreferences.getInstance();
       tester.view.physicalSize = const Size(390, 844);
@@ -49,14 +52,11 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           theme: andesTheme(),
-          home: ArticleScreen(
-            article: fixture,
-            endpoint: defaultAndesEndpoint,
-            token: 'x' * 32,
-            prefs: prefs,
-            isSaved: false,
-            onSave: (_) async {},
-            service: FixtureService(),
+          home: ProviderScope(
+            overrides: [
+              newsServiceProvider.overrideWithValue(FixtureService()),
+            ],
+            child: ArticleScreen(article: fixture),
           ),
         ),
       );

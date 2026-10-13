@@ -58,7 +58,7 @@ void main() {
     },
   );
   test('Clean body and translation survive cache roundtrip', () {
-    const article = Article(
+    final article = Article(
       id: 'test',
       title: 'Original',
       url: 'https://example.com',
