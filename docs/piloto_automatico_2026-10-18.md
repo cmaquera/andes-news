@@ -29,13 +29,13 @@ Se respaldó SQLite en `/data/before-canary-20261018.db`. Con el trabajador dete
 
 La revisión posterior encontró un error semántico que el control heurístico **no detectó**: el resumen atribuía 66,8 puntos a los modelos evaluados en conjunto, mientras que el texto los atribuía al mejor modelo. Se corrigieron resumen y puntos clave, registrando `summaryBasis=human_review`, fecha, `summaryReviewIssues=[metric_attribution]` y una razón visible de revisión posterior. Se conserva la procedencia de publicación automática. **Este fallo impide presentar el ensayo como generación autónoma fiable** y confirma que hace falta auditoría semántica independiente.
 
-La pantalla del teléfono se actualizó a **141 lecturas**, conservando las dos noticias revisadas del paso anterior. El ensayo usa el APK 0.6.0 existente.
+La pantalla del teléfono se actualizó a **141 lecturas**, conservando las dos noticias revisadas del paso anterior. Se buscó la nueva noticia por su titular y se abrió el lector: muestra «Selección automática de prueba» y la revisión posterior. El ensayo usa el APK 0.6.0 existente. La búsqueda actual consulta titular, extracto y fuente; no indexa el abstracto ni el cuerpo, por lo que buscar únicamente «KillSwitch» no devolvía esta noticia cuyo titular no incluye ese nombre.
 
 ## Consolidación de despliegue
 
 La rama autorizada `codex/horizon-laya-integration` está publicada en `cmaquera/andes-news`. Se configuró el servicio existente de Dokploy para usar esa rama y `./compose.dokploy.yaml`, manteniendo AutoDeploy y el proyecto/volumen. Se respaldó su configuración previa en un archivo privado del servidor, se verificó por hash la conservación de la credencial del móvil y se añadió la configuración necesaria de los servicios privados sin imprimir secretos.
 
-La definición de fuentes está en `/etc/dokploy/compose/andes-news-api-tvq8rl/files/horizon-sources.json`, fuera del checkout, y la variable de Dokploy usa `../files/horizon-sources.json`. El origen de un próximo despliegue queda alineado con la integración. La ejecución comprobada inicialmente se hizo por CLI; el disparo desde Dokploy debe confirmarse por su registro de despliegue. La promoción futura a `main` debe actualizar también la rama del servicio después de integrar el PR.
+La definición de fuentes está en `/etc/dokploy/compose/andes-news-api-tvq8rl/files/horizon-sources.json`, fuera del checkout, y la variable de Dokploy usa `../files/horizon-sources.json`. La primera ejecución de AutoDeploy clonó la rama correcta, pero falló antes de recrear servicios porque no resolvía las dos credenciales privadas. Se corrigió la configuración de Dokploy usando los valores efectivos del contenedor en funcionamiento, sin imprimirlos ni rotarlos. La ejecución comprobada inicialmente se hizo por CLI; el siguiente disparo desde Dokploy debe confirmarse por su registro de despliegue. La promoción futura a `main` debe actualizar también la rama del servicio después de integrar el PR.
 
 ## Comprobaciones técnicas
 
