@@ -105,9 +105,10 @@ test('Upgrade reassesses old feed and pending jobs without deleting saved detail
   mkdirSync(root, { recursive: true });
   const dir = mkdtempSync(join(root, 'focus-upgrade-'));
   assert.ok(dir.startsWith(root + sep));
+  let store;
   try {
     const path = join(dir, 'test.db');
-    let store = new Store(path);
+    store = new Store(path);
     const a = store.discover({ title: 'Python API release', url: 'https://example.com/a' }).article;
     store.save(
       {
@@ -122,13 +123,14 @@ test('Upgrade reassesses old feed and pending jobs without deleting saved detail
     );
     store.setMeta('focusVersion', 0);
     store.close();
+    store = undefined;
     store = new Store(path);
     assert.equal(store.list().length, 0);
     assert.equal(store.get(a.id).abstract, 'Resumen antiguo');
     assert.equal(store.get(a.id).status, 'filtered');
     assert.equal(store.next(), null);
-    store.close();
   } finally {
+    store?.close();
     rmSync(dir, { recursive: true, force: true });
   }
 });

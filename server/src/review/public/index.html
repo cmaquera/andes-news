@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Andes · Revisión editorial</title>
+    <link rel="stylesheet" href="/style.css" />
+    <script type="module" src="/app.js"></script>
+  </head>
+  <body>
+    <header>
+      <div>
+        <span class="eyebrow">ANDES / DESARROLLO</span>
+        <h1>Revisión editorial</h1>
+        <p>Tu criterio ayuda a ajustar el filtro, los duplicados y los resúmenes.</p>
+      </div>
+      <a class="button" href="/api/feedback/export" download>Exportar feedback</a>
+    </header>
+    <div class="notice">
+      Solo revisión · Guardar feedback no publica ni elimina noticias. Los datos son una captura, no
+      el feed en tiempo real.
+    </div>
+    <section id="overview" aria-label="Resumen"></section>
+    <div class="toolbar">
+      <label>Buscar<input id="search" type="search" placeholder="Título, URL o motivo…" /></label
+      ><label
+        >Decisión<select id="category">
+          <option value="all">Todas las decisiones</option>
+          <option value="rejected">Descartadas</option>
+          <option value="review">Requieren revisión / error</option>
+          <option value="duplicates">Duplicados y candidatos</option>
+          <option value="shadow">Ocultas en piloto</option>
+          <option value="ready">Preparadas para el feed</option>
+          <option value="filtered">Filtradas por otro motivo</option>
+          <option value="pending">Pendientes</option>
+        </select></label
+      ><label
+        >Fuente<select id="source">
+          <option value="all">Todas las fuentes</option>
+        </select></label
+      ><label
+        >Feedback<select id="feedback-filter">
+          <option value="all">Todo</option>
+          <option value="none">Sin evaluar</option>
+          <option value="correct">Decisión correcta</option>
+          <option value="incorrect">Decisión incorrecta</option>
+          <option value="stale">Evaluación anterior</option>
+        </select></label
+      >
+    </div>
+    <main>
+      <aside>
+        <div id="list-count" role="status"></div>
+        <div id="list"></div>
+        <button id="more" hidden>Cargar 60 más</button>
+      </aside>
+      <article id="detail"><p>Selecciona una noticia para revisarla.</p></article>
+    </main>
+    <footer id="snapshot"></footer>
+  </body>
+</html>
