@@ -7,6 +7,7 @@ export function createApi({
   collector,
   apiToken = process.env.ANDES_API_TOKEN,
   logger = false,
+  editorial = (process.env.EDITORIAL_MODE ?? 'rules') === 'laya',
 } = {}) {
   const app = Fastify({
     logger: logger
@@ -31,6 +32,6 @@ export function createApi({
       .send({ error: status === 500 ? 'Internal server error' : 'Invalid request' });
   });
   app.setNotFoundHandler((_request, reply) => reply.code(404).send({ error: 'Not found' }));
-  app.register(articleRoutes, { store, collector });
+  app.register(articleRoutes, { store, collector, editorial });
   return app;
 }

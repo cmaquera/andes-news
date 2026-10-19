@@ -1,0 +1,17 @@
+{
+  "sources": {
+    "hackernews": {"enabled": true, "fetch_top_stories": 30, "min_score": 0},
+    "rss": [
+      {"name": "GitHub Changelog", "url": "https://github.blog/changelog/feed/", "enabled": true},
+      {"name": "Genbeta", "url": "https://www.genbeta.com/rss2.xml", "enabled": true}
+    ],
+    "reddit": {"enabled": false, "subreddits": [], "users": [], "fetch_comments": 5},
+    "telegram": {"enabled": false, "channels": []},
+    "twitter": {"enabled": false, "mode": "apify", "users": [], "keywords": [], "fetch_limit": 10, "fetch_reply_text": true, "max_replies_per_tweet": 3, "max_tweets_to_expand": 3},
+    "github": [],
+    "openbb": {"enabled": false, "watchlists": [], "fetch_filings": false},
+    "ossinsight": {"enabled": true, "period": "past_24_hours", "languages": ["Python", "TypeScript"], "keywords": [], "min_stars": 10, "max_items": 20},
+    "gdelt": {"enabled": true, "query": "(\"artificial intelligence\" OR \"software engineering\")", "mode": "ArtList", "max_records": 30},
+    "google_news": {"enabled": true, "query": "\"inteligencia artificial\" OR \"desarrollo de software\"", "language": "es", "country": "PE", "max_results": 30}
+  }
+}

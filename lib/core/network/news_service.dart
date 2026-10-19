@@ -95,6 +95,13 @@ class NewsService {
     }
   }
 
+  Future<List<NewsSource>> catalog() async {
+    final result = await getJson('/sources');
+    return (result['sources'] as List)
+        .map((s) => NewsSource.fromJson(Map<String, dynamic>.from(s)))
+        .toList();
+  }
+
   Future<FeedResult> load(Set<String> enabled) async {
     try {
       final data = await getJson('/articles?limit=200');

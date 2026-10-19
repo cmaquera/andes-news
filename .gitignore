@@ -40,6 +40,8 @@ migrate_working_dir/
 *.db
 *.db-shm
 *.db-wal
+/services/horizon_bridge/sources.json
+**/__pycache__/
 
 # Symbolication related
 app.*.symbols

@@ -6,7 +6,6 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../app/theme.dart';
 import '../../core/ui/news_widgets.dart';
-import '../../data/models/article.dart';
 import '../feed/feed_controller.dart';
 import 'settings_controller.dart';
 
@@ -133,7 +132,7 @@ class _SettingsViewState extends ConsumerState<SettingsScreen> {
           ),
         ),
         const SizedBox(height: 8),
-        ...sources.map(
+        ...state.value.catalog.map(
           (s) => SwitchListTile(
             contentPadding: EdgeInsets.zero,
             secondary: SourceBadge(s.id, size: 35),
@@ -165,7 +164,7 @@ class _SettingsViewState extends ConsumerState<SettingsScreen> {
         const Divider(),
         const SizedBox(height: 12),
         const Text(
-          'Andes · Versión 0.5',
+          'Andes · Versión 0.6',
           style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
         ),
         const SizedBox(height: 8),

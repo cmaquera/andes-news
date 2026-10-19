@@ -2,6 +2,8 @@ import { sources, loadSource } from '../services/sources.mjs';
 import { ArticleExtractor } from '../services/article_extractor.mjs';
 import { OllamaModel, detectLanguage } from '../services/ollama.mjs';
 import { assessFocus } from '../services/focus.mjs';
+import { EditorialPolicy } from '../services/editorial.mjs';
+import { PublicationPolicy, checkSummary } from '../services/publication.mjs';
 export const POLL_INTERVAL = 2 * 60 * 60 * 1000;
 export class Collector {
   constructor({
@@ -11,6 +13,8 @@ export class Collector {
     load = loadSource,
     now = () => Date.now(),
     interval = POLL_INTERVAL,
+    editorial,
+    publication,
   } = {}) {
     this.store = store;
     this.extractor = extractor;
@@ -18,6 +22,9 @@ export class Collector {
     this.load = load;
     this.now = now;
     this.interval = interval;
+    this.editorial = editorial ?? new EditorialPolicy({ store });
+    this.publication = publication ?? new PublicationPolicy({ store, now });
+    if (this.editorial.mode === 'shadow') this.store.hideShadowNegatives();
     this.discovering = false;
     this.processing = false;
     this.stopped = false;
@@ -38,12 +45,20 @@ export class Collector {
           for (const candidate of candidates) {
             try {
               const relevance = assessFocus(candidate);
-              if (!relevance.accepted) {
+              if (!relevance.accepted && this.editorial.mode === 'rules') {
                 filtered++;
                 continue;
               }
               if (selected++ >= 20) break;
-              if (this.store.discover({ ...candidate, relevance, topic: relevance.topic }).isNew)
+              if (
+                this.store.discover({
+                  ...candidate,
+                  ingestionShadow: this.editorial.mode === 'shadow' && !relevance.accepted,
+                  relevance:
+                    this.editorial.mode === 'rules' ? relevance : { ...relevance, accepted: true },
+                  topic: relevance.topic,
+                }).isNew
+              )
                 added++;
             } catch (_) {
               errors[source.id] = 'invalid_source_item';
@@ -73,7 +88,22 @@ export class Collector {
     this.store.save(article, 'processing');
     try {
       if (!article.contentText || article.needsRichExtraction) {
-        const body = await this.extractor.extract(article.url, article);
+        const native =
+          article.contentKind && article.contentKind !== 'article' && article.nativeText?.trim();
+        const body = native
+          ? {
+              blocks: [{ type: 'paragraph', text: article.nativeText }],
+              text: article.nativeText,
+              coverage: 'native',
+              extractionVersion: 2,
+              language: article.languageHint,
+              wordCount: article.nativeText.split(/\s+/).length,
+              author: article.author,
+              fetchedAt: new Date(this.now()).toISOString(),
+              extractionMethod: 'horizon-native',
+              resolvedUrl: article.url,
+            }
+          : await this.extractor.extract(article.url, article);
         article = {
           ...article,
           content: body.blocks,
@@ -99,11 +129,37 @@ export class Collector {
         };
         this.store.save(article, 'processing');
       }
-      article.relevance = assessFocus(article, { full: true });
-      article.topic = article.relevance.topic;
-      if (!article.relevance.accepted) {
+      article = await this.editorial.evaluate(article);
+      if (
+        !article.relevance.accepted ||
+        (article.ingestionShadow &&
+          this.editorial.mode === 'shadow' &&
+          article.editorialStatus !== 'accepted')
+      ) {
+        // Retain the decision/body for review without spending summary and
+        // translation inference on hidden rejected, uncertain or failed items.
         this.store.save(article, 'filtered');
         return true;
+      }
+      if (this.editorial.mode !== 'rules' && article.editorialStatus === 'accepted') {
+        const duplicate = await this.editorial.duplicate(article).catch((error) => {
+          if (this.editorial.mode !== 'shadow') throw error;
+          article.dedupError = 'semantic_dedup_unavailable';
+          return null;
+        });
+        if (duplicate) {
+          article.dedupMethod = duplicate.method;
+          if (
+            this.editorial.mode === 'laya' &&
+            (duplicate.method === 'content_hash' || this.editorial.dedup === 'active')
+          ) {
+            article.duplicateOf = duplicate.id;
+            article.editorialStatus = 'duplicate';
+            this.store.save(article, 'filtered');
+            return true;
+          }
+          article.duplicateCandidateOf = duplicate.id;
+        }
       }
       if (!article.abstract) {
         article = {
@@ -119,7 +175,9 @@ export class Collector {
       article.processedAt = new Date(this.now()).toISOString();
       article.lastError = null;
       article.status = 'ready';
+      article.summaryQuality = checkSummary(article);
       this.store.save(article, 'ready');
+      this.publication.publish(article);
     } catch (e) {
       this.store.fail(article, e.code ?? e.message ?? 'processing_failed');
       console.warn(`Article ${article.id}: ${e.code ?? e.message ?? 'failed'}`);
@@ -152,9 +210,11 @@ export class Collector {
     };
     work();
   }
-  stop() {
+  async stop() {
     this.stopped = true;
     clearInterval(this.collectionTimer);
     clearTimeout(this.workerTimer);
+    while (this.processing || this.discovering)
+      await new Promise((resolve) => setTimeout(resolve, 25));
   }
 }

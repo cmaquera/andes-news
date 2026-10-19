@@ -84,6 +84,10 @@ class FeedController extends Notifier<FeedState> {
     try {
       final result = await repo.fetchFeed(settings);
       if (!ref.mounted || generation != _generation) return;
+      if (result.error == null && result.catalog.isNotEmpty) {
+        await ref.read(settingsProvider.notifier).mergeCatalog(result.catalog);
+        if (!ref.mounted || generation != _generation) return;
+      }
       final articles = result.error == null ? result.articles : state.articles,
           updated = result.collectedAt ?? state.updated;
       state = FeedState(
@@ -139,12 +143,17 @@ List<Article> filterArticles(
 }) => articles
     .where(
       (a) =>
-          enabled.contains(a.sourceId) &&
+          (enabled.contains(a.sourceId) ||
+              a.sourceOccurrences.any(
+                (s) => enabled.contains(s['sourceId']),
+              )) &&
           (region == 'Todas' ||
               a.region == region ||
               (region == 'Latinoamérica' && a.region == 'Perú')) &&
           (topic == 'Todo' || a.topic == topic) &&
-          (source.isEmpty || a.sourceId == source) &&
+          (source.isEmpty ||
+              a.sourceId == source ||
+              a.sourceOccurrences.any((s) => s['sourceId'] == source)) &&
           '${a.displayTitle} ${a.title} ${a.excerpt} ${a.sourceName}'
               .toLowerCase()
               .contains(query.toLowerCase()),

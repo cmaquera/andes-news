@@ -1,0 +1,73 @@
+# Opt in: docker compose -f compose.yaml -f compose.intelligence.yaml up -d --build
+services:
+  andes-api:
+    environment:
+      ANDES_INGESTION_TOKEN: ${ANDES_INGESTION_TOKEN:?Define a separate ingestion token}
+      INGESTION_HOST: 0.0.0.0
+      INGESTION_PORT: 8788
+      INGESTION_MODE: ${INGESTION_MODE:-shadow}
+      EDITORIAL_MODE: ${EDITORIAL_MODE:-shadow}
+      EDITORIAL_THRESHOLD: ${EDITORIAL_THRESHOLD:-7}
+      SEMANTIC_DEDUP_MODE: ${SEMANTIC_DEDUP_MODE:-shadow}
+      LAYA_URL: http://laya:8000
+      LAYA_API_KEY: ${LAYA_API_KEY:?Define a separate Laya token}
+      LAYA_REVISION: ${LAYA_REVISION:-reviewed}
+      PUBLICATION_MODE: ${PUBLICATION_MODE:-reviewed}
+      PILOT_DAILY_LIMIT: ${PILOT_DAILY_LIMIT:-3}
+      PILOT_MIN_SCORE: ${PILOT_MIN_SCORE:-8.5}
+      PILOT_SOURCE_TYPES: ${PILOT_SOURCE_TYPES:-hackernews}
+    networks:
+      - dokploy-network
+      - andes-services
+  horizon-bridge:
+    build:
+      context: ./services/horizon_bridge
+      args:
+        INSTALL_OPENBB: ${INSTALL_OPENBB:-0}
+    restart: unless-stopped
+    env_file:
+      - path: ./.env.horizon
+        required: false
+    environment:
+      ANDES_INGESTION_URL: http://andes-api:8788
+      ANDES_INGESTION_TOKEN: ${ANDES_INGESTION_TOKEN:?Define a separate ingestion token}
+      APIFY_TOKEN: ${APIFY_TOKEN:-}
+      GITHUB_TOKEN: ${GITHUB_TOKEN:-}
+    depends_on:
+      andes-api:
+        condition: service_healthy
+    volumes:
+      - type: bind
+        source: ${HORIZON_SOURCES_FILE:-./services/horizon_bridge/sources.example.json}
+        target: /config/sources.json
+        read_only: true
+        bind:
+          create_host_path: false
+      - horizon-outbox:/data
+    networks:
+      - andes-services
+    mem_limit: 1g
+    cpus: 1.0
+  laya:
+    build: ./services/laya
+    restart: unless-stopped
+    environment:
+      LAYA_API_KEY: ${LAYA_API_KEY:?Define a separate Laya token}
+      LAYA_REVISION: ${LAYA_REVISION:-reviewed}
+    volumes:
+      - laya-models:/models
+    networks:
+      - andes-services
+    mem_limit: 8g
+    cpus: 2.0
+    healthcheck:
+      test: ["CMD", "python", "-c", "import os,urllib.request; r=urllib.request.Request('http://127.0.0.1:8000/health',headers={'Authorization':'Bearer '+os.environ['LAYA_API_KEY']}); urllib.request.urlopen(r,timeout=10)"]
+      interval: 60s
+      timeout: 15s
+      start_period: 10m
+      retries: 3
+volumes:
+  horizon-outbox:
+  laya-models:
+networks:
+  andes-services:

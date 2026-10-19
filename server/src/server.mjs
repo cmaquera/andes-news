@@ -3,6 +3,7 @@ import { createApi } from './app.mjs';
 import { serverSettings, APP_VERSION } from './config/env.mjs';
 import { Store } from './repositories/sqlite_store.mjs';
 import { Collector } from './jobs/collector.mjs';
+import { createIngestionApi } from './routes/ingestion.mjs';
 
 // The executable owns the database and worker. createApi only builds Fastify,
 // so route tests and future consumers can provide their own dependencies.
@@ -14,11 +15,24 @@ export async function startServer({
 } = {}) {
   store ??= new Store(settings.databasePath);
   collector ??= new Collector({ store });
-  let app;
+  let app, ingestion;
   try {
     app = createApi({ store, collector, apiToken: settings.apiToken, logger });
     app.addHook('preClose', async () => collector.stop());
+    app.addHook('preClose', async () => {
+      if (ingestion) await ingestion.close();
+    });
     app.addHook('onClose', async () => store.close());
+    if (settings.ingestionToken) {
+      if (settings.ingestionToken === settings.apiToken)
+        throw Error('Ingestion token must differ from mobile token');
+      ingestion = createIngestionApi({
+        store,
+        token: settings.ingestionToken,
+        mode: settings.ingestionMode,
+      });
+      await ingestion.listen({ port: settings.ingestionPort, host: settings.ingestionHost });
+    }
     await app.listen({ port: settings.port, host: settings.host });
     collector.start();
     app.log.info(`Andes News ${APP_VERSION}: Fastify API, collection every two hours`);

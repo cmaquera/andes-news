@@ -122,9 +122,9 @@ class _ReaderState extends ConsumerState<ArticleScreen> {
     final partial = article.coverage == 'partial';
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          'Lectura limpia',
-          style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600),
+        title: Text(
+          article.isNative ? 'Publicación original' : 'Lectura limpia',
+          style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w600),
         ),
         actions: [
           IconButton(
@@ -196,17 +196,49 @@ class _ReaderState extends ConsumerState<ArticleScreen> {
                 ],
               ),
               const SizedBox(height: 20),
+              if (article.editorialScore != null &&
+                  article.editorialStatus == 'accepted') ...[
+                Text(
+                  'Valor editorial: ${article.editorialScore!.toStringAsFixed(1)}/10',
+                  style: const TextStyle(color: _blue, fontSize: 12),
+                ),
+                ...article.selectionReasons.map(
+                  (reason) => Text(
+                    reason,
+                    style: const TextStyle(color: _muted, fontSize: 12),
+                  ),
+                ),
+                const SizedBox(height: 12),
+              ],
+              if (article.sourceOccurrences.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: Text(
+                    'Encontrado en: ${article.sourceOccurrences.map((s) => s['sourceName']).toSet().join(', ')}',
+                    style: const TextStyle(color: _muted, fontSize: 12),
+                  ),
+                ),
+              if (article.isNative)
+                const Padding(
+                  padding: EdgeInsets.only(bottom: 12),
+                  child: Text(
+                    'Texto de la publicación recuperada. Puede ser un mensaje breve o una nota de versión; no representa un artículo completo.',
+                    style: TextStyle(color: _muted, fontSize: 12),
+                  ),
+                ),
               SegmentedButton<String>(
-                segments: const [
-                  ButtonSegment(
+                segments: [
+                  const ButtonSegment(
                     value: 'abstract',
                     label: Text('Abstracto'),
                     icon: Icon(Icons.auto_awesome, size: 17),
                   ),
                   ButtonSegment(
                     value: 'article',
-                    label: Text('Artículo limpio'),
-                    icon: Icon(Icons.article_outlined, size: 17),
+                    label: Text(
+                      article.isNative ? 'Publicación' : 'Artículo limpio',
+                    ),
+                    icon: const Icon(Icons.article_outlined, size: 17),
                   ),
                 ],
                 selected: {view},

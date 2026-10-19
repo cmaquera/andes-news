@@ -48,6 +48,7 @@ class _FeedViewState extends ConsumerState<FeedView> {
   bool get loading => feed.loading;
   DateTime? get updated => feed.updated;
   Set<String> get enabled => ref.read(settingsProvider).value.enabledSources;
+  List<NewsSource> get catalog => ref.read(settingsProvider).value.catalog;
   @override
   void initState() {
     super.initState();
@@ -445,10 +446,10 @@ class _FeedViewState extends ConsumerState<FeedView> {
         child: ListView.separated(
           padding: const EdgeInsets.symmetric(horizontal: 20),
           scrollDirection: Axis.horizontal,
-          itemCount: sources.length,
+          itemCount: catalog.length,
           separatorBuilder: (_, i) => const SizedBox(width: 16),
           itemBuilder: (_, i) {
-            final s = sources[i];
+            final s = catalog[i];
             return InkWell(
               onTap: () => setState(
                 () => sourceFilter = sourceFilter == s.id ? '' : s.id,

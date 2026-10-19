@@ -1,0 +1,794 @@
+{
+  "measuredAt": "2026-10-19T00:10:07.213Z",
+  "snapshotSha256": "b8610d1dc7b0d2bd41fe547a3be0f04a56a508fa81c0af6bf20d583d18bc8afe",
+  "version": "andes-software-ai-v3",
+  "provenance": "Codex assessment of selected real captured documents on 2026-10-18. Cases chosen after observing errors; diagnostic regression set, not a human-labeled or held-out benchmark.",
+  "plannedCases": 18,
+  "results": [
+    {
+      "id": "ae6e49210029e41a672a7f639a040f26",
+      "title": "Hybrid Reasoning Agents: LLM agents that think in latent space, act through text",
+      "expectedScope": "technical",
+      "previousStatus": "accepted",
+      "status": "accepted",
+      "score": 9.7,
+      "decision": {
+        "articleId": "ae6e49210029e41a672a7f639a040f26",
+        "status": "accepted",
+        "score": 9.7,
+        "probabilities": {
+          "relevant": 0.9477,
+          "technical": 0.9824,
+          "evidence": 0.9874,
+          "useful": 0.9864
+        },
+        "inputHash": "ec7439c27b4f0b043c1e9ad4480066a6f4a2bfa21d7a658d6999212cd3ccf015",
+        "version": "andes-software-ai-v3",
+        "modelRevision": "laya-0.4.11:reviewed",
+        "routing": {
+          "model": "multilingual",
+          "repo": "convaiinnovations/laya/multilingual",
+          "reason": "explicit model='multilingual'",
+          "detection": null,
+          "workflow": null
+        },
+        "durationMs": 5710,
+        "truncated": false,
+        "windowCount": 1,
+        "scopeProbability": 0.9608,
+        "bodyEvaluated": true,
+        "evaluatedAt": "2026-10-19T00:08:14.659Z"
+      },
+      "summaryQuality": {
+        "version": "summary-check-v1",
+        "status": "passed",
+        "reasons": [],
+        "unsupportedNumbers": []
+      },
+      "durationMs": 5713
+    },
+    {
+      "id": "4dc309c2f9cfbf220cd028d26e02715f",
+      "title": "DeepSeek search and fetch – $0.75 per 1000 successful requests",
+      "expectedScope": "technical",
+      "previousStatus": "accepted",
+      "status": "review",
+      "score": 2.88,
+      "decision": {
+        "articleId": "4dc309c2f9cfbf220cd028d26e02715f",
+        "status": "review",
+        "score": 2.88,
+        "probabilities": {
+          "relevant": 0.7189,
+          "technical": 0,
+          "evidence": 0,
+          "useful": 0
+        },
+        "inputHash": "ce7d0679727fdf8467ffa60bfc9639f4f5585bc1efd8a44c67fa39614e8fd7ac",
+        "version": "andes-software-ai-v3",
+        "modelRevision": "laya-0.4.11:reviewed",
+        "routing": {
+          "model": "multilingual",
+          "repo": "convaiinnovations/laya/multilingual",
+          "reason": "explicit model='multilingual'",
+          "detection": null,
+          "workflow": null
+        },
+        "durationMs": 992,
+        "truncated": false,
+        "windowCount": 0,
+        "scopeProbability": 0.7189,
+        "bodyEvaluated": false,
+        "evaluatedAt": "2026-10-19T00:08:15.656Z"
+      },
+      "summaryQuality": {
+        "version": "summary-check-v1",
+        "status": "passed",
+        "reasons": [],
+        "unsupportedNumbers": []
+      },
+      "durationMs": 993
+    },
+    {
+      "id": "0e1c32a585dd4e05db26ac4f3767b338",
+      "title": "Show HN: Sphinx – A hook that quizzes you on your AI's code before shipping",
+      "expectedScope": "technical",
+      "previousStatus": "accepted",
+      "status": "accepted",
+      "score": 7.38,
+      "decision": {
+        "articleId": "0e1c32a585dd4e05db26ac4f3767b338",
+        "status": "accepted",
+        "score": 7.38,
+        "probabilities": {
+          "relevant": 0.9383,
+          "technical": 0.9297,
+          "evidence": 0.0253,
+          "useful": 0.8329
+        },
+        "inputHash": "0033c8f6ca54fb41db3f3abb8d66a6d821268511cc75bc6b0068cfb2fadde208",
+        "version": "andes-software-ai-v3",
+        "modelRevision": "laya-0.4.11:reviewed",
+        "routing": {
+          "model": "multilingual",
+          "repo": "convaiinnovations/laya/multilingual",
+          "reason": "explicit model='multilingual'",
+          "detection": null,
+          "workflow": null
+        },
+        "durationMs": 6183,
+        "truncated": false,
+        "windowCount": 1,
+        "scopeProbability": 0.9383,
+        "bodyEvaluated": true,
+        "evaluatedAt": "2026-10-19T00:08:21.843Z"
+      },
+      "summaryQuality": {
+        "version": "summary-check-v1",
+        "status": "review",
+        "reasons": [
+          "unsupported_reliability_claim"
+        ],
+        "unsupportedNumbers": []
+      },
+      "durationMs": 6184
+    },
+    {
+      "id": "7b7b800d55fc8f257f96f14a839d2774",
+      "title": "I built a programming language that LLMs can't use",
+      "expectedScope": "technical",
+      "previousStatus": "accepted",
+      "status": "accepted",
+      "score": 9.15,
+      "decision": {
+        "articleId": "7b7b800d55fc8f257f96f14a839d2774",
+        "status": "accepted",
+        "score": 9.15,
+        "probabilities": {
+          "relevant": 0.9855,
+          "technical": 0.8876,
+          "evidence": 0.8229500000000001,
+          "useful": 0.898
+        },
+        "inputHash": "29cea9d4bdd3f83b87cddadcc6940a066655f98b9f703067d60ced5328d1dec1",
+        "version": "andes-software-ai-v3",
+        "modelRevision": "laya-0.4.11:reviewed",
+        "routing": {
+          "model": "multilingual",
+          "repo": "convaiinnovations/laya/multilingual",
+          "reason": "explicit model='multilingual'",
+          "detection": null,
+          "workflow": null
+        },
+        "durationMs": 11020,
+        "truncated": false,
+        "windowCount": 2,
+        "scopeProbability": 0.9958,
+        "bodyEvaluated": true,
+        "evaluatedAt": "2026-10-19T00:08:32.867Z"
+      },
+      "summaryQuality": {
+        "version": "summary-check-v1",
+        "status": "review",
+        "reasons": [
+          "unsupported_reliability_claim"
+        ],
+        "unsupportedNumbers": []
+      },
+      "durationMs": 11022
+    },
+    {
+      "id": "d992fb8bbdeef24d2e40134db1613f71",
+      "title": "Parser Combinators",
+      "expectedScope": "technical",
+      "previousStatus": "accepted",
+      "status": "review",
+      "score": 2.43,
+      "decision": {
+        "articleId": "d992fb8bbdeef24d2e40134db1613f71",
+        "status": "review",
+        "score": 2.43,
+        "probabilities": {
+          "relevant": 0.6086,
+          "technical": 0,
+          "evidence": 0,
+          "useful": 0
+        },
+        "inputHash": "6353d4fe9b3fd570ea8e6393571722cf9cf8dd0bf5ca730eb71403160bc5ca83",
+        "version": "andes-software-ai-v3",
+        "modelRevision": "laya-0.4.11:reviewed",
+        "routing": {
+          "model": "multilingual",
+          "repo": "convaiinnovations/laya/multilingual",
+          "reason": "explicit model='multilingual'",
+          "detection": null,
+          "workflow": null
+        },
+        "durationMs": 1175,
+        "truncated": false,
+        "windowCount": 0,
+        "scopeProbability": 0.6086,
+        "bodyEvaluated": false,
+        "evaluatedAt": "2026-10-19T00:08:34.046Z"
+      },
+      "summaryQuality": {
+        "version": "summary-check-v1",
+        "status": "review",
+        "reasons": [
+          "missing_summary_or_body"
+        ],
+        "unsupportedNumbers": []
+      },
+      "durationMs": 1175
+    },
+    {
+      "id": "216b5e3cb4cc8a043250dbbf7a5cda85",
+      "title": "Netflix vmaf: Perceptual video quality assessment based on multi-method fusion",
+      "expectedScope": "technical",
+      "previousStatus": "rejected",
+      "status": "review",
+      "score": 5.05,
+      "decision": {
+        "articleId": "216b5e3cb4cc8a043250dbbf7a5cda85",
+        "status": "review",
+        "score": 5.05,
+        "probabilities": {
+          "relevant": 0.7474247424742475,
+          "technical": 0.4304,
+          "evidence": 0.2888,
+          "useful": 0.2724
+        },
+        "inputHash": "810d3bfa87a8f7176c74967487a6b483f7e6c212b9d1d0bf6cd07f20477b79cf",
+        "version": "andes-software-ai-v3",
+        "modelRevision": "laya-0.4.11:reviewed",
+        "routing": {
+          "model": "multilingual",
+          "repo": "convaiinnovations/laya/multilingual",
+          "reason": "explicit model='multilingual'",
+          "detection": null,
+          "workflow": null
+        },
+        "durationMs": 11649,
+        "truncated": false,
+        "windowCount": 2,
+        "scopeProbability": 0.9213,
+        "bodyEvaluated": true,
+        "evaluatedAt": "2026-10-19T00:08:45.699Z"
+      },
+      "summaryQuality": {
+        "version": "summary-check-v1",
+        "status": "passed",
+        "reasons": [],
+        "unsupportedNumbers": []
+      },
+      "durationMs": 11649
+    },
+    {
+      "id": "4fd55317c015671469950a276db7b52b",
+      "title": "Mitos editor is a fork of Helix",
+      "expectedScope": "technical",
+      "previousStatus": "rejected",
+      "status": "review",
+      "score": 2.3,
+      "decision": {
+        "articleId": "4fd55317c015671469950a276db7b52b",
+        "status": "review",
+        "score": 2.3,
+        "probabilities": {
+          "relevant": 0.5748574857485749,
+          "technical": 0,
+          "evidence": 0,
+          "useful": 0
+        },
+        "inputHash": "58cb5b7fda0d971799c8d9acf2418b91d87b1cd063a2eafcfc329871346e4246",
+        "version": "andes-software-ai-v3",
+        "modelRevision": "laya-0.4.11:reviewed",
+        "routing": {
+          "model": "multilingual",
+          "repo": "convaiinnovations/laya/multilingual",
+          "reason": "explicit model='multilingual'",
+          "detection": null,
+          "workflow": null
+        },
+        "durationMs": 766,
+        "truncated": false,
+        "windowCount": 0,
+        "scopeProbability": 0.5748574857485749,
+        "bodyEvaluated": false,
+        "evaluatedAt": "2026-10-19T00:08:46.468Z"
+      },
+      "summaryQuality": {
+        "version": "summary-check-v1",
+        "status": "review",
+        "reasons": [
+          "missing_summary_or_body"
+        ],
+        "unsupportedNumbers": []
+      },
+      "durationMs": 766
+    },
+    {
+      "id": "2c3aef1d96199127b13e9582ee3d9b9c",
+      "title": "Crear un servidor MCP en Python con el SDK oficial 2.x (adiós, FastMCP)",
+      "expectedScope": "technical",
+      "previousStatus": "accepted",
+      "status": "accepted",
+      "score": 8.11,
+      "decision": {
+        "articleId": "2c3aef1d96199127b13e9582ee3d9b9c",
+        "status": "accepted",
+        "score": 8.11,
+        "probabilities": {
+          "relevant": 0.9756666666666667,
+          "technical": 0.7606333333333334,
+          "evidence": 0.6012333333333334,
+          "useful": 0.7388
+        },
+        "inputHash": "bf070f2fef68e9766d7e6f5ecc07aa60ddf921c2518830430c05d1ad6a686ce1",
+        "version": "andes-software-ai-v3",
+        "modelRevision": "laya-0.4.11:reviewed",
+        "routing": {
+          "model": "multilingual",
+          "repo": "convaiinnovations/laya/multilingual",
+          "reason": "explicit model='multilingual'",
+          "detection": null,
+          "workflow": null
+        },
+        "durationMs": 18225,
+        "truncated": false,
+        "windowCount": 3,
+        "scopeProbability": 0.9962996299629963,
+        "bodyEvaluated": true,
+        "evaluatedAt": "2026-10-19T00:09:04.697Z"
+      },
+      "summaryQuality": {
+        "version": "summary-check-v1",
+        "status": "review",
+        "reasons": [
+          "missing_summary_or_body"
+        ],
+        "unsupportedNumbers": []
+      },
+      "durationMs": 18227
+    },
+    {
+      "id": "ccda0a79ad9b0a1fd2a42a4e03f53c9e",
+      "title": "Microsoft Defender llega a Linux para protegerte de virus y malware",
+      "expectedScope": "technical",
+      "previousStatus": "rejected",
+      "status": "rejected",
+      "score": 5.95,
+      "decision": {
+        "articleId": "ccda0a79ad9b0a1fd2a42a4e03f53c9e",
+        "status": "rejected",
+        "score": 5.95,
+        "probabilities": {
+          "relevant": 0.929493304330433,
+          "technical": 0.6092500000000001,
+          "evidence": 0.06805,
+          "useful": 0.38034999999999997
+        },
+        "inputHash": "09624204ed53ee151734aacf124d369b4a9d155708f2c46731591bf4d96001d4",
+        "version": "andes-software-ai-v3",
+        "modelRevision": "laya-0.4.11:reviewed",
+        "routing": {
+          "model": "multilingual",
+          "repo": "convaiinnovations/laya/multilingual",
+          "reason": "explicit model='multilingual'",
+          "detection": null,
+          "workflow": null
+        },
+        "durationMs": 6536,
+        "truncated": false,
+        "windowCount": 2,
+        "scopeProbability": 0.9877,
+        "bodyEvaluated": true,
+        "evaluatedAt": "2026-10-19T00:09:11.237Z"
+      },
+      "summaryQuality": {
+        "version": "summary-check-v1",
+        "status": "review",
+        "reasons": [
+          "missing_summary_or_body"
+        ],
+        "unsupportedNumbers": []
+      },
+      "durationMs": 6536
+    },
+    {
+      "id": "61e3a85bb7785ed7f97c331a9c57dedf",
+      "title": "Dogs seem to agree with humans that 'bouba' is round and 'kiki' is spiky",
+      "expectedScope": "outside",
+      "previousStatus": "rejected",
+      "status": "review",
+      "score": 2.61,
+      "decision": {
+        "articleId": "61e3a85bb7785ed7f97c331a9c57dedf",
+        "status": "review",
+        "score": 2.61,
+        "probabilities": {
+          "relevant": 0.652,
+          "technical": 0,
+          "evidence": 0,
+          "useful": 0
+        },
+        "inputHash": "4d4d177b2389964dc512a4a846a8efde3b1f0771b9aeb8932a985a85e20643aa",
+        "version": "andes-software-ai-v3",
+        "modelRevision": "laya-0.4.11:reviewed",
+        "routing": {
+          "model": "multilingual",
+          "repo": "convaiinnovations/laya/multilingual",
+          "reason": "explicit model='multilingual'",
+          "detection": null,
+          "workflow": null
+        },
+        "durationMs": 811,
+        "truncated": false,
+        "windowCount": 0,
+        "scopeProbability": 0.652,
+        "bodyEvaluated": false,
+        "evaluatedAt": "2026-10-19T00:09:12.051Z"
+      },
+      "summaryQuality": {
+        "version": "summary-check-v1",
+        "status": "review",
+        "reasons": [
+          "unsupported_reliability_claim"
+        ],
+        "unsupportedNumbers": []
+      },
+      "durationMs": 812
+    },
+    {
+      "id": "57743babc5756b426172be5124d4c58b",
+      "title": "Florida's HOAs and condo associations are making the housing crisis worse",
+      "expectedScope": "outside",
+      "previousStatus": "review",
+      "status": "rejected",
+      "score": 0.5,
+      "decision": {
+        "articleId": "57743babc5756b426172be5124d4c58b",
+        "status": "rejected",
+        "score": 0.5,
+        "probabilities": {
+          "relevant": 0.1248,
+          "technical": 0,
+          "evidence": 0,
+          "useful": 0
+        },
+        "inputHash": "eaab140a601115dc32014fffe128234c4b3cbe3b9992260126c26fb1c8adb8b0",
+        "version": "andes-software-ai-v3",
+        "modelRevision": "laya-0.4.11:reviewed",
+        "routing": {
+          "model": "multilingual",
+          "repo": "convaiinnovations/laya/multilingual",
+          "reason": "explicit model='multilingual'",
+          "detection": null,
+          "workflow": null
+        },
+        "durationMs": 851,
+        "truncated": false,
+        "windowCount": 0,
+        "scopeProbability": 0.1248,
+        "bodyEvaluated": false,
+        "evaluatedAt": "2026-10-19T00:09:12.906Z"
+      },
+      "summaryQuality": {
+        "version": "summary-check-v1",
+        "status": "review",
+        "reasons": [
+          "unsupported_reliability_claim"
+        ],
+        "unsupportedNumbers": []
+      },
+      "durationMs": 852
+    },
+    {
+      "id": "b9e94d4639602c2c7e9c841af5dff38d",
+      "title": "Profeco, experto en consumo: \"Para organizar mejor tu dinero, siempre separa tu ahorro cuando recibas el pago\"",
+      "expectedScope": "outside",
+      "previousStatus": "accepted",
+      "status": "rejected",
+      "score": 0.29,
+      "decision": {
+        "articleId": "b9e94d4639602c2c7e9c841af5dff38d",
+        "status": "rejected",
+        "score": 0.29,
+        "probabilities": {
+          "relevant": 0.0737,
+          "technical": 0,
+          "evidence": 0,
+          "useful": 0
+        },
+        "inputHash": "d2a787554a041e6ea799ab5459a4eb83631f71666770fdbfca0691dd83526af5",
+        "version": "andes-software-ai-v3",
+        "modelRevision": "laya-0.4.11:reviewed",
+        "routing": {
+          "model": "multilingual",
+          "repo": "convaiinnovations/laya/multilingual",
+          "reason": "explicit model='multilingual'",
+          "detection": null,
+          "workflow": null
+        },
+        "durationMs": 726,
+        "truncated": false,
+        "windowCount": 0,
+        "scopeProbability": 0.0737,
+        "bodyEvaluated": false,
+        "evaluatedAt": "2026-10-19T00:09:13.636Z"
+      },
+      "summaryQuality": {
+        "version": "summary-check-v1",
+        "status": "review",
+        "reasons": [
+          "missing_summary_or_body"
+        ],
+        "unsupportedNumbers": []
+      },
+      "durationMs": 727
+    },
+    {
+      "id": "3c3d7e70296a21818fef0f413909b108",
+      "title": "Shark lanza tres aspiradoras en México con luz azul para detectar el polvo que normalmente no vemos",
+      "expectedScope": "outside",
+      "previousStatus": "accepted",
+      "status": "review",
+      "score": 1.18,
+      "decision": {
+        "articleId": "3c3d7e70296a21818fef0f413909b108",
+        "status": "review",
+        "score": 1.18,
+        "probabilities": {
+          "relevant": 0.29560000000000003,
+          "technical": 0,
+          "evidence": 0,
+          "useful": 0
+        },
+        "inputHash": "fb165695eec53fed536d4b38bc825d90f6c2e3334130006e6e8f958c59c59deb",
+        "version": "andes-software-ai-v3",
+        "modelRevision": "laya-0.4.11:reviewed",
+        "routing": {
+          "model": "multilingual",
+          "repo": "convaiinnovations/laya/multilingual",
+          "reason": "explicit model='multilingual'",
+          "detection": null,
+          "workflow": null
+        },
+        "durationMs": 940,
+        "truncated": false,
+        "windowCount": 0,
+        "scopeProbability": 0.29560000000000003,
+        "bodyEvaluated": false,
+        "evaluatedAt": "2026-10-19T00:09:14.582Z"
+      },
+      "summaryQuality": {
+        "version": "summary-check-v1",
+        "status": "review",
+        "reasons": [
+          "missing_summary_or_body"
+        ],
+        "unsupportedNumbers": []
+      },
+      "durationMs": 940
+    },
+    {
+      "id": "8c3702630e25a40a2176c23870256a47",
+      "title": "Una pareja compró una vieja Royal Enfield de segunda mano hace casi 50 años. Ya tiene 580,000 km y no piensa detenerse",
+      "expectedScope": "outside",
+      "previousStatus": "accepted",
+      "status": "review",
+      "score": 2.08,
+      "decision": {
+        "articleId": "8c3702630e25a40a2176c23870256a47",
+        "status": "review",
+        "score": 2.08,
+        "probabilities": {
+          "relevant": 0.5191,
+          "technical": 0,
+          "evidence": 0,
+          "useful": 0
+        },
+        "inputHash": "7e9576803764458105882f2caaee03a972330d3e7a2010c3c704ef0e3563d604",
+        "version": "andes-software-ai-v3",
+        "modelRevision": "laya-0.4.11:reviewed",
+        "routing": {
+          "model": "multilingual",
+          "repo": "convaiinnovations/laya/multilingual",
+          "reason": "explicit model='multilingual'",
+          "detection": null,
+          "workflow": null
+        },
+        "durationMs": 821,
+        "truncated": false,
+        "windowCount": 0,
+        "scopeProbability": 0.5191,
+        "bodyEvaluated": false,
+        "evaluatedAt": "2026-10-19T00:09:15.407Z"
+      },
+      "summaryQuality": {
+        "version": "summary-check-v1",
+        "status": "review",
+        "reasons": [
+          "missing_summary_or_body"
+        ],
+        "unsupportedNumbers": []
+      },
+      "durationMs": 823
+    },
+    {
+      "id": "24234b1fb028e78850089c3282f1823f",
+      "title": "Como escolher um portátil sem pagar pelo que não precisa",
+      "expectedScope": "outside",
+      "previousStatus": "accepted",
+      "status": "review",
+      "score": 7.29,
+      "decision": {
+        "articleId": "24234b1fb028e78850089c3282f1823f",
+        "status": "review",
+        "score": 7.29,
+        "probabilities": {
+          "relevant": 0.7463921506436357,
+          "technical": 0.82835,
+          "evidence": 0.565125,
+          "useful": 0.734375
+        },
+        "inputHash": "103519d25d47fd39c4efa5372542ea34a6bbd32dd1042670d62028532db0f5f6",
+        "version": "andes-software-ai-v3",
+        "modelRevision": "laya-0.4.11:reviewed",
+        "routing": {
+          "model": "multilingual",
+          "repo": "convaiinnovations/laya/multilingual",
+          "reason": "explicit model='multilingual'",
+          "detection": null,
+          "workflow": null
+        },
+        "durationMs": 39729,
+        "truncated": false,
+        "windowCount": 7,
+        "scopeProbability": 0.9267,
+        "bodyEvaluated": true,
+        "evaluatedAt": "2026-10-19T00:09:55.140Z"
+      },
+      "summaryQuality": {
+        "version": "summary-check-v1",
+        "status": "passed",
+        "reasons": [],
+        "unsupportedNumbers": []
+      },
+      "durationMs": 39730
+    },
+    {
+      "id": "88e946d1002d5ea36e17be149c12e988",
+      "title": "Taiwan Semiconductor Just Proved Why It a Top AI Investment",
+      "expectedScope": "outside",
+      "previousStatus": "review",
+      "status": "review",
+      "score": 6.79,
+      "decision": {
+        "articleId": "88e946d1002d5ea36e17be149c12e988",
+        "status": "review",
+        "score": 6.79,
+        "probabilities": {
+          "relevant": 0.7796,
+          "technical": 0.6101,
+          "evidence": 0.567,
+          "useful": 0.6782
+        },
+        "inputHash": "37eac81813eb08d243a82d6e0000ab96ddbea5446f10af812518c2f47011ebed",
+        "version": "andes-software-ai-v3",
+        "modelRevision": "laya-0.4.11:reviewed",
+        "routing": {
+          "model": "multilingual",
+          "repo": "convaiinnovations/laya/multilingual",
+          "reason": "explicit model='multilingual'",
+          "detection": null,
+          "workflow": null
+        },
+        "durationMs": 10515,
+        "truncated": false,
+        "windowCount": 2,
+        "scopeProbability": 0.9128000000000001,
+        "bodyEvaluated": true,
+        "evaluatedAt": "2026-10-19T00:10:05.659Z"
+      },
+      "summaryQuality": {
+        "version": "summary-check-v1",
+        "status": "review",
+        "reasons": [
+          "missing_summary_or_body"
+        ],
+        "unsupportedNumbers": []
+      },
+      "durationMs": 10515
+    },
+    {
+      "id": "77c818f6747a00e6b305987c79a74397",
+      "title": "Hoy en streaming: costó solo 3 millones de dólares y se convirtió en un clásico moderno de terror distópico",
+      "expectedScope": "outside",
+      "previousStatus": "rejected",
+      "status": "review",
+      "score": 1.18,
+      "decision": {
+        "articleId": "77c818f6747a00e6b305987c79a74397",
+        "status": "review",
+        "score": 1.18,
+        "probabilities": {
+          "relevant": 0.2952,
+          "technical": 0,
+          "evidence": 0,
+          "useful": 0
+        },
+        "inputHash": "b6a577080832fb7ec28cb257858e7810d13da3b90ada070473be7fcafa657946",
+        "version": "andes-software-ai-v3",
+        "modelRevision": "laya-0.4.11:reviewed",
+        "routing": {
+          "model": "multilingual",
+          "repo": "convaiinnovations/laya/multilingual",
+          "reason": "explicit model='multilingual'",
+          "detection": null,
+          "workflow": null
+        },
+        "durationMs": 785,
+        "truncated": false,
+        "windowCount": 0,
+        "scopeProbability": 0.2952,
+        "bodyEvaluated": false,
+        "evaluatedAt": "2026-10-19T00:10:06.448Z"
+      },
+      "summaryQuality": {
+        "version": "summary-check-v1",
+        "status": "review",
+        "reasons": [
+          "missing_summary_or_body"
+        ],
+        "unsupportedNumbers": []
+      },
+      "durationMs": 785
+    },
+    {
+      "id": "22410342f7fab887bd544cd2d2c2b0a4",
+      "title": "Heineken busca producir cerveza con menos agua en México, donde la escasez preocupa cada vez más",
+      "expectedScope": "outside",
+      "previousStatus": "review",
+      "status": "rejected",
+      "score": 0.47,
+      "decision": {
+        "articleId": "22410342f7fab887bd544cd2d2c2b0a4",
+        "status": "rejected",
+        "score": 0.47,
+        "probabilities": {
+          "relevant": 0.1183,
+          "technical": 0,
+          "evidence": 0,
+          "useful": 0
+        },
+        "inputHash": "e07f9bce65b4bc09bef8d4b453b634bfd7cd08c8fd79c24c71b664f2215b9bd1",
+        "version": "andes-software-ai-v3",
+        "modelRevision": "laya-0.4.11:reviewed",
+        "routing": {
+          "model": "multilingual",
+          "repo": "convaiinnovations/laya/multilingual",
+          "reason": "explicit model='multilingual'",
+          "detection": null,
+          "workflow": null
+        },
+        "durationMs": 761,
+        "truncated": false,
+        "windowCount": 0,
+        "scopeProbability": 0.1183,
+        "bodyEvaluated": false,
+        "evaluatedAt": "2026-10-19T00:10:07.212Z"
+      },
+      "summaryQuality": {
+        "version": "summary-check-v1",
+        "status": "review",
+        "reasons": [
+          "missing_summary_or_body"
+        ],
+        "unsupportedNumbers": []
+      },
+      "durationMs": 762
+    }
+  ],
+  "note": "Selected diagnostic cases assessed by Codex, not independent human labels or a representative benchmark. No production precision or recall claim."
+}

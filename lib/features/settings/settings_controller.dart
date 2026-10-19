@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../app/providers.dart';
 import '../../core/network/news_service.dart';
 import '../../data/repositories/settings_repository.dart';
+import '../../data/models/article.dart';
 
 class SettingsState {
   final ConnectionSettings value;
@@ -61,6 +62,18 @@ class SettingsController extends Notifier<SettingsState> {
       selected.remove(id);
     }
     return _save(state.value.copyWith(enabledSources: selected));
+  }
+
+  Future<void> mergeCatalog(List<NewsSource> catalog) async {
+    if (catalog.isEmpty || state.saving) return;
+    final known = state.value.catalog.map((s) => s.id).toSet();
+    final selected = {
+      ...state.value.enabledSources,
+      ...catalog.where((s) => !known.contains(s.id)).map((s) => s.id),
+    };
+    await _save(
+      state.value.copyWith(catalog: catalog, enabledSources: selected),
+    );
   }
 
   Future<String?> _save(ConnectionSettings value) async {

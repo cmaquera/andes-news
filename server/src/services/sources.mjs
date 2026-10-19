@@ -26,7 +26,14 @@ function date(value) {
   const d = new Date(value);
   return Number.isNaN(d.getTime()) ? null : d.toISOString();
 }
-export async function loadSource(source, { get = publicGet, limit = 20 } = {}) {
+export async function loadSource(
+  source,
+  {
+    get = publicGet,
+    limit = 20,
+    applyFocus = (process.env.EDITORIAL_MODE ?? 'rules') === 'rules',
+  } = {},
+) {
   const response = await get(source.url);
   let items;
   if (source.kind === 'rss') {
@@ -66,7 +73,7 @@ export async function loadSource(source, { get = publicGet, limit = 20 } = {}) {
           !j.deleted &&
           j.type === 'story' &&
           j.url &&
-          assessFocus({ title: j.title, sourceId: 'hn' }).accepted
+          (!applyFocus || assessFocus({ title: j.title, sourceId: 'hn' }).accepted)
         )
           items.push({
             title: plain(j.title),

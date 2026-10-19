@@ -3,6 +3,12 @@ const defaultAndesEndpoint = 'https://andes-news.cmaquera.com';
 class NewsSource {
   final String id, name, region;
   const NewsSource(this.id, this.name, this.region);
+  factory NewsSource.fromJson(Map<String, dynamic> j) => NewsSource(
+    j['id'] as String,
+    j['name'] as String,
+    j['region'] as String? ?? 'Global',
+  );
+  Map<String, dynamic> toJson() => {'id': id, 'name': name, 'region': region};
 }
 
 const sources = [
@@ -79,6 +85,10 @@ class TableCellData {
 }
 
 class Article {
+  final String sourceLabel, contentKind, editorialStatus;
+  final double? editorialScore;
+  final List<String> selectionReasons;
+  final List<Map<String, dynamic>> sourceOccurrences;
   final String id,
       title,
       url,
@@ -105,6 +115,12 @@ class Article {
     required this.sourceId,
     required this.region,
     required this.topic,
+    this.sourceLabel = '',
+    this.contentKind = 'article',
+    this.editorialStatus = '',
+    this.editorialScore,
+    List<String> selectionReasons = const [],
+    List<Map<String, dynamic>> sourceOccurrences = const [],
     this.imageUrl = '',
     this.published,
     this.score = 0,
@@ -119,18 +135,30 @@ class Article {
     List<ContentBlock> content = const [],
     List<ContentBlock> translatedContent = const [],
     List<String> keyPoints = const [],
-  }) : content = List.unmodifiable(content),
+  }) : selectionReasons = List.unmodifiable(selectionReasons),
+       sourceOccurrences = List.unmodifiable(
+         sourceOccurrences.map((s) => Map<String, dynamic>.unmodifiable(s)),
+       ),
+       content = List.unmodifiable(content),
        translatedContent = List.unmodifiable(translatedContent),
        keyPoints = List.unmodifiable(keyPoints);
   String get displayTitle => titleEs.isEmpty ? title : titleEs;
-  String get sourceName =>
-      sources.where((s) => s.id == sourceId).firstOrNull?.name ?? sourceId;
+  String get sourceName => sourceLabel.isNotEmpty
+      ? sourceLabel
+      : sources.where((s) => s.id == sourceId).firstOrNull?.name ?? sourceId;
+  bool get isNative => contentKind != 'article';
   Map<String, dynamic> toJson() => {
     'id': id,
     'title': title,
     'url': url,
     'excerpt': excerpt,
     'sourceId': sourceId,
+    'sourceName': sourceLabel,
+    'contentKind': contentKind,
+    'editorialStatus': editorialStatus,
+    'editorialScore': editorialScore,
+    'selectionReasons': selectionReasons,
+    'sourceOccurrences': sourceOccurrences,
     'region': region,
     'topic': topic,
     'imageUrl': imageUrl,
@@ -154,6 +182,14 @@ class Article {
     url: j['url'],
     excerpt: j['feedExcerpt'] ?? j['excerpt'] ?? '',
     sourceId: j['sourceId'],
+    sourceLabel: j['sourceName'] ?? '',
+    contentKind: j['contentKind'] ?? 'article',
+    editorialStatus: j['editorialStatus'] ?? '',
+    editorialScore: (j['editorialScore'] as num?)?.toDouble(),
+    selectionReasons: (j['selectionReasons'] as List? ?? []).cast<String>(),
+    sourceOccurrences: (j['sourceOccurrences'] as List? ?? [])
+        .map((s) => Map<String, dynamic>.from(s))
+        .toList(),
     region: j['region'],
     topic: j['topic'],
     imageUrl: j['imageUrl'] ?? '',
@@ -178,6 +214,7 @@ class Article {
 }
 
 class FeedResult {
+  final List<NewsSource> catalog;
   final List<Article> articles;
   final Map<String, String> errors;
   final String? error;
@@ -189,7 +226,9 @@ class FeedResult {
     this.error,
     this.collectedAt,
     Map<String, dynamic> counts = const {},
-  }) : articles = List.unmodifiable(articles),
+    List<NewsSource> catalog = const [],
+  }) : catalog = List.unmodifiable(catalog),
+       articles = List.unmodifiable(articles),
        errors = Map.unmodifiable(errors),
        counts = Map.unmodifiable(counts);
 }

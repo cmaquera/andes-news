@@ -1,0 +1,23 @@
+{
+  "provenance": "Codex assessment of selected real captured documents on 2026-10-18. Cases chosen after observing errors; diagnostic regression set, not a human-labeled or held-out benchmark.",
+  "cases": [
+    { "id": "ae6e49210029e41a672a7f639a040f26", "expectedScope": "technical" },
+    { "id": "4dc309c2f9cfbf220cd028d26e02715f", "expectedScope": "technical" },
+    { "id": "0e1c32a585dd4e05db26ac4f3767b338", "expectedScope": "technical" },
+    { "id": "7b7b800d55fc8f257f96f14a839d2774", "expectedScope": "technical" },
+    { "id": "d992fb8bbdeef24d2e40134db1613f71", "expectedScope": "technical" },
+    { "id": "216b5e3cb4cc8a043250dbbf7a5cda85", "expectedScope": "technical" },
+    { "id": "4fd55317c015671469950a276db7b52b", "expectedScope": "technical" },
+    { "id": "2c3aef1d96199127b13e9582ee3d9b9c", "expectedScope": "technical" },
+    { "id": "ccda0a79ad9b0a1fd2a42a4e03f53c9e", "expectedScope": "technical" },
+    { "id": "61e3a85bb7785ed7f97c331a9c57dedf", "expectedScope": "outside" },
+    { "id": "57743babc5756b426172be5124d4c58b", "expectedScope": "outside" },
+    { "id": "b9e94d4639602c2c7e9c841af5dff38d", "expectedScope": "outside" },
+    { "id": "3c3d7e70296a21818fef0f413909b108", "expectedScope": "outside" },
+    { "id": "8c3702630e25a40a2176c23870256a47", "expectedScope": "outside" },
+    { "id": "24234b1fb028e78850089c3282f1823f", "expectedScope": "outside" },
+    { "id": "88e946d1002d5ea36e17be149c12e988", "expectedScope": "outside" },
+    { "id": "77c818f6747a00e6b305987c79a74397", "expectedScope": "outside" },
+    { "id": "22410342f7fab887bd544cd2d2c2b0a4", "expectedScope": "outside" }
+  ]
+}

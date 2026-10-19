@@ -1,8 +1,10 @@
 # Andes News
 
-Android en Flutter y backend de noticias de desarrollo de software e IA para Perú y Latinoamérica. Backend 0.4.3 con Fastify 5 y APK 0.5: el servidor recopila fuentes cada dos horas, recupera el cuerpo de los artículos, genera abstractos en español y conserva una lectura limpia con texto original, imágenes, tablas y traducción cuando hace falta.
+Android en Flutter y backend de noticias de desarrollo de software e IA para Perú y Latinoamérica. Backend 0.5.0 con Fastify 5 y APK 0.6: el servidor recopila fuentes cada dos horas, recupera el cuerpo de los artículos, genera abstractos en español y conserva una lectura limpia con texto original, imágenes, tablas y traducción cuando hace falta.
 
 ## Arquitectura
+
+Integración opcional: [Horizon + Laya: configuración de diez tipos de fuente, despliegue y evaluación](docs/despliegue_horizon_laya.md), [arquitectura y protocolo de calidad](docs/integracion_horizon_laya.md) e [informe de validación](docs/validacion_horizon_laya.md). El modo predeterminado conserva las reglas actuales; la captura multifuente y clasificación local se habilitan con `compose.intelligence.yaml`.
 
 ```mermaid
 flowchart TD

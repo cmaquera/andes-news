@@ -34,11 +34,29 @@ class ApiNewsRepository implements NewsRepository {
   Future<DateTime?> lastUpdate() async =>
       DateTime.tryParse((await local.preferences).getString('updated') ?? '');
   @override
-  Future<FeedResult> fetchFeed(ConnectionSettings settings) {
+  Future<FeedResult> fetchFeed(ConnectionSettings settings) async {
     service.configure(settings.endpoint, settings.token);
     // Store the complete feed; source switches filter locally without losing
     // cached stories from temporarily disabled sources.
-    return service.load(sources.map((s) => s.id).toSet());
+    List<NewsSource> catalog = const [];
+    try {
+      catalog = await service.catalog();
+    } catch (_) {
+      /* Cached sources remain usable offline or on older servers. */
+    }
+    final result = await service.load({
+      ...sources.map((s) => s.id),
+      ...settings.catalog.map((s) => s.id),
+      ...catalog.map((s) => s.id),
+    });
+    return FeedResult(
+      result.articles,
+      result.errors,
+      error: result.error,
+      collectedAt: result.collectedAt,
+      counts: result.counts,
+      catalog: catalog,
+    );
   }
 
   @override

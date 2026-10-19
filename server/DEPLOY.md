@@ -1,5 +1,7 @@
 # Andes en Dokploy con Ollama privado en Ubuntu
 
+Para backend 0.5.0 y Android 0.6, la integración opcional con diez tipos de fuente de Horizon y clasificación local de Laya se despliega siguiendo [esta guía](../docs/despliegue_horizon_laya.md). Incluye listener privado, secretos separados, copia de SQLite y promoción/reversión. Las instrucciones siguientes describen el despliegue base, que sigue funcionando sin esos servicios.
+
 La app llama a la API pública de Andes. La versión 0.4 recopila fuentes cada dos horas, recupera cuerpos de artículos con imágenes, tablas y videos compatibles y procesa abstractos y traducciones en una cola automática. El contenedor consulta al Ollama existente en Ubuntu por la red interna. No se inicia un segundo Ollama ni se descargan otros modelos.
 
 ## Actualizar desde versiones anteriores

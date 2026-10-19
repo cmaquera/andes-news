@@ -1,24 +1,36 @@
 import { sources } from '../config/sources.mjs';
 import { APP_VERSION } from '../config/env.mjs';
 import { pagination, articleId } from '../schemas/articles.mjs';
+import { SOURCE_TYPES } from './ingestion.mjs';
 
-export async function articleRoutes(app, { store, collector }) {
+export async function articleRoutes(app, { store, collector, editorial = false }) {
   app.get('/', { config: { public: true } }, async () => ({
     service: 'Andes News',
     version: APP_VERSION,
     health: '/health',
   }));
   app.get('/health', { config: { public: true } }, async () => ({ status: 'ok' }));
-  app.get('/sources', async () => ({ sources }));
+  app.get('/sources', async () => ({
+    sources: [...sources, ...store.sourceCatalog()],
+    supportedTypes: SOURCE_TYPES,
+  }));
   app.get('/status', async () => ({
     collection: store.getMeta('collection'),
     nextCollectionAt: store.getMeta('nextCollectionAt'),
     counts: store.counts(),
     processing: collector?.processing ?? false,
+    ingestion: store.getMeta('ingestion'),
+    editorialMode: collector?.editorial?.mode ?? 'rules',
+    publication: collector?.publication?.status?.() ?? {
+      mode: collector?.publication?.mode ?? 'reviewed',
+      dailyLimit: collector?.publication?.dailyLimit ?? 0,
+      sourceTypes: collector?.publication?.sourceTypes ?? [],
+      minScore: collector?.publication?.minScore ?? null,
+    },
   }));
   app.get('/articles', { schema: { querystring: pagination } }, async (request) => {
     const { limit, offset } = request.query,
-      articles = store.list({ limit, offset });
+      articles = store.list({ limit, offset, editorial });
     return {
       articles,
       nextOffset: articles.length === limit ? offset + limit : null,
