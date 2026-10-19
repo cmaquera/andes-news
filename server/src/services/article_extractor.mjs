@@ -4,6 +4,11 @@ import { SourceError, publicGet, RobotsPolicy } from './public_http.mjs';
 import { publicUrl } from './public_http.mjs';
 import { randomUUID } from 'node:crypto';
 import { arxivIdentity, arxivFormats } from './arxiv.mjs';
+import {
+  resolveScientificReferences,
+  scientificDocuments,
+  nativeReferencePage,
+} from './scientific_documents.mjs';
 
 const unwanted =
   'script,style,iframe,form,button,input,nav,footer,aside,noscript,svg,[role="dialog"],[aria-modal="true"],.advertisement,.ad-container,.adsbygoogle,.newsletter-signup,.related-articles,.related-posts,.article-related,[id*="cookie"],[class*="cookie"],[id*="consent"],[class*="consent"]';
@@ -237,6 +242,35 @@ export class ArticleExtractor {
     this.get = get;
     this.robots = robots;
   }
+  async nativeReferences(text, url) {
+    if (!/https?:\/\//.test(text)) return [];
+    return (await resolveScientificReferences(nativeReferencePage(text, url), this)).papers;
+  }
+  async discoverDocuments(article) {
+    if (article.contentKind && article.contentKind !== 'article')
+      return { papers: await this.nativeReferences(article.nativeText ?? '', article.url) };
+    await this.robots.allowed(article.url);
+    const page = await this.get(article.url, {
+      metadataForPdf: true,
+      timeout: 12000,
+      accept: 'text/html,application/xhtml+xml,application/pdf',
+    });
+    await this.robots.allowed(page.url);
+    if (/application\/pdf/i.test(page.type))
+      return {
+        papers: [
+          {
+            sourceUrl: page.url,
+            pdfUrl: page.url,
+            title: article.title,
+            provider: new URL(page.url).hostname,
+            relation: 'document',
+          },
+        ],
+      };
+    if (!/html|xhtml/i.test(page.type)) throw new SourceError('unsupported_content');
+    return resolveScientificReferences(page, this);
+  }
   async extract(url, candidate = {}) {
     // DEV's public article endpoint explicitly supplies the body, unlike the
     // short description in its listing endpoint. It avoids the website shell.
@@ -258,6 +292,7 @@ export class ArticleExtractor {
       );
       return {
         ...extracted,
+        papers: (await resolveScientificReferences({ body: article.body_html, url }, this)).papers,
         author: typeof article.user?.name === 'string' ? article.user.name : '',
         resolvedUrl: url,
         extractionMethod: 'forem-body-api',
@@ -266,13 +301,45 @@ export class ArticleExtractor {
     const arxiv = arxivIdentity(url);
     if (arxiv) url = arxiv.abstractUrl;
     await this.robots.allowed(url);
-    const page = await this.get(url);
+    const page = await this.get(url, {
+      metadataForPdf: true,
+      accept: 'text/html,application/xhtml+xml,application/pdf',
+    });
+    if (/application\/pdf/i.test(page.type)) {
+      await this.robots.allowed(page.url);
+      const paper = {
+        sourceUrl: page.url,
+        pdfUrl: page.url,
+        title: candidate.title || 'Documento científico',
+        provider: new URL(page.url).hostname,
+        relation: 'document',
+      };
+      return {
+        blocks: [],
+        text: '',
+        wordCount: 0,
+        coverage: 'unavailable',
+        contentScope: 'paper_pdf_only',
+        paper,
+        papers: [paper],
+        extractionVersion: 4,
+        extractionMethod: 'pdf-link',
+        resolvedUrl: page.url,
+        fetchedAt: new Date().toISOString(),
+      };
+    }
     if (!/html|xhtml/i.test(page.type)) throw new SourceError('unsupported_content');
     // Recheck the final destination too: a publisher redirect can change origins.
     await this.robots.allowed(page.url);
     const formats = arxivFormats(page.body, page.url);
     if (formats) {
-      const base = { paper: formats.paper, author: formats.author, extractionVersion: 3 };
+      const paper = {
+        ...formats.paper,
+        sourceUrl: page.url,
+        provider: 'arXiv',
+        relation: 'document',
+      };
+      const base = { paper, papers: [paper], author: formats.author, extractionVersion: 4 };
       if (formats.paper.htmlUrl) {
         try {
           await this.robots.allowed(formats.paper.htmlUrl);
@@ -309,6 +376,54 @@ export class ArticleExtractor {
         extractionMethod: 'arxiv-abstract',
       };
     }
-    return { ...extractHtml(page.body, page.url), resolvedUrl: page.url };
+    const scientific = await resolveScientificReferences(page, this);
+    let bodyPage = page,
+      htmlError;
+    const own = scientific.paper;
+    if (own?.htmlUrl && own.htmlUrl !== page.url) {
+      try {
+        await this.robots.allowed(own.htmlUrl);
+        const full = await this.get(own.htmlUrl);
+        await this.robots.allowed(full.url);
+        if (!/html|xhtml/i.test(full.type)) throw new SourceError('unsupported_content');
+        const metadata = scientificDocuments(full.body, full.url).paper;
+        if (own.doi && metadata?.doi && own.doi.toLowerCase() !== metadata.doi.toLowerCase())
+          throw new SourceError('paper_identity_mismatch');
+        extractHtml(full.body, full.url); // A login/empty page must not replace the record.
+        bodyPage = full;
+      } catch (error) {
+        htmlError = error.code ?? 'html_unavailable';
+      }
+    }
+    let extracted;
+    try {
+      extracted = extractHtml(bodyPage.body, bodyPage.url);
+    } catch (error) {
+      if (!own || error.code !== 'insufficient_article') throw error;
+      extracted = {
+        blocks: [],
+        text: '',
+        wordCount: 0,
+        coverage: 'unavailable',
+        fetchedAt: new Date().toISOString(),
+      };
+    }
+    const fullPaper = own && own.htmlUrl && !htmlError;
+    return {
+      ...extracted,
+      resolvedUrl: bodyPage.url,
+      extractionVersion: 4,
+      papers: scientific.papers,
+      ...(own
+        ? {
+            paper: own,
+            author: scientific.author || extracted.author,
+            contentScope: fullPaper ? 'paper' : 'paper_record',
+            coverage: fullPaper ? extracted.coverage : 'partial',
+            paperHtmlError: htmlError,
+          }
+        : {}),
+      paperDiscoveryFailures: scientific.failures,
+    };
   }
 }

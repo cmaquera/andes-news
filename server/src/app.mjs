@@ -1,6 +1,7 @@
 import Fastify from 'fastify';
 import { installAuthentication } from './plugins/authentication.mjs';
 import { articleRoutes } from './routes/articles.mjs';
+import { DocumentDiscovery } from './services/document_discovery.mjs';
 
 export function createApi({
   store,
@@ -8,6 +9,7 @@ export function createApi({
   apiToken = process.env.ANDES_API_TOKEN,
   logger = false,
   editorial = (process.env.EDITORIAL_MODE ?? 'rules') === 'laya',
+  documents,
 } = {}) {
   const app = Fastify({
     logger: logger
@@ -32,6 +34,10 @@ export function createApi({
       .send({ error: status === 500 ? 'Internal server error' : 'Invalid request' });
   });
   app.setNotFoundHandler((_request, reply) => reply.code(404).send({ error: 'Not found' }));
-  app.register(articleRoutes, { store, collector, editorial });
+  documents ??= collector?.extractor?.discoverDocuments
+    ? new DocumentDiscovery({ store, discover: (a) => collector.extractor.discoverDocuments(a) })
+    : null;
+  if (documents) app.addHook('preClose', async () => documents.close());
+  app.register(articleRoutes, { store, collector, editorial, documents });
   return app;
 }

@@ -93,7 +93,8 @@ class TableCellData {
 
 class Article {
   final Map<String, String> paper;
-  final String contentScope, summaryScope;
+  final List<Map<String, String>> papers;
+  final String contentScope, summaryScope, documentDiscovery;
   final String sourceLabel, contentKind, editorialStatus;
   final double? editorialScore;
   final List<String> selectionReasons;
@@ -126,7 +127,9 @@ class Article {
     required this.topic,
     this.contentScope = '',
     this.summaryScope = '',
+    this.documentDiscovery = '',
     Map<String, String> paper = const {},
+    List<Map<String, String>> papers = const [],
     this.sourceLabel = '',
     this.contentKind = 'article',
     this.editorialStatus = '',
@@ -148,6 +151,9 @@ class Article {
     List<ContentBlock> translatedContent = const [],
     List<String> keyPoints = const [],
   }) : paper = Map.unmodifiable(paper),
+       papers = List.unmodifiable(
+         papers.map((p) => Map<String, String>.unmodifiable(p)),
+       ),
        selectionReasons = List.unmodifiable(selectionReasons),
        sourceOccurrences = List.unmodifiable(
          sourceOccurrences.map((s) => Map<String, dynamic>.unmodifiable(s)),
@@ -160,6 +166,11 @@ class Article {
       ? sourceLabel
       : sources.where((s) => s.id == sourceId).firstOrNull?.name ?? sourceId;
   bool get isNative => contentKind != 'article';
+  List<Map<String, String>> get scientificPapers => papers.isNotEmpty
+      ? papers
+      : paper.isEmpty
+      ? const []
+      : [paper];
   Map<String, dynamic> toJson() => {
     'id': id,
     'title': title,
@@ -175,8 +186,10 @@ class Article {
     'region': region,
     'topic': topic,
     'paper': paper,
+    'papers': papers,
     'contentScope': contentScope,
     'summaryScope': summaryScope,
+    'documentDiscovery': documentDiscovery,
     'imageUrl': imageUrl,
     'published': published?.toIso8601String(),
     'score': score,
@@ -211,8 +224,14 @@ class Article {
     paper: (j['paper'] as Map? ?? {}).map(
       (k, v) => MapEntry(k.toString(), v.toString()),
     ),
+    papers: (j['papers'] as List? ?? [])
+        .map(
+          (p) => (p as Map).map((k, v) => MapEntry(k.toString(), v.toString())),
+        )
+        .toList(),
     contentScope: j['contentScope'] ?? '',
     summaryScope: j['summaryScope'] ?? '',
+    documentDiscovery: j['documentDiscovery'] ?? '',
     imageUrl: j['imageUrl'] ?? '',
     published: DateTime.tryParse(j['published'] ?? ''),
     score: j['score'] ?? 0,

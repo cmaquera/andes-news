@@ -6,13 +6,13 @@ import 'package:video_player/video_player.dart';
 
 import '../../../data/models/article.dart';
 
-Uri? readerMediaUri(String value) {
+Uri? readerSourceUri(String value) {
   final u = Uri.tryParse(value);
   if (u == null ||
-      u.scheme != 'https' ||
+      !['https', 'http'].contains(u.scheme) ||
       !u.hasAuthority ||
       u.userInfo.isNotEmpty ||
-      u.port != 443 ||
+      u.port != (u.scheme == 'https' ? 443 : 80) ||
       !u.host.contains('.') ||
       u.host.endsWith('.local') ||
       u.host.endsWith('.localhost') ||
@@ -21,6 +21,11 @@ Uri? readerMediaUri(String value) {
     return null;
   }
   return u;
+}
+
+Uri? readerMediaUri(String value) {
+  final u = readerSourceUri(value);
+  return u?.scheme == 'https' ? u : null;
 }
 
 class ReaderImage extends StatelessWidget {

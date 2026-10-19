@@ -56,7 +56,7 @@ class _ReaderState extends ConsumerState<ArticleScreen> {
       ref.read(readerProvider(widget.article).notifier).refresh();
   Future<void> openSource([String? url]) async {
     try {
-      final uri = readerMediaUri(url ?? article.url);
+      final uri = readerSourceUri(url ?? article.url);
       if (uri == null) throw const FormatException('Invalid source URL');
       if (await launchUrl(uri, mode: LaunchMode.externalApplication)) {
         return;
@@ -225,27 +225,80 @@ class _ReaderState extends ConsumerState<ArticleScreen> {
                     style: TextStyle(color: _muted, fontSize: 12),
                   ),
                 ),
-              if (article.paper.isNotEmpty) ...[
-                Wrap(
-                  spacing: 8,
-                  children: [
-                    if (readerMediaUri(article.paper['htmlUrl'] ?? '') != null)
-                      OutlinedButton.icon(
-                        onPressed: () => openSource(article.paper['htmlUrl']),
-                        icon: const Icon(Icons.language, size: 18),
-                        label: const Text('Ver HTML en arXiv'),
-                      ),
-                    if (readerMediaUri(article.paper['pdfUrl'] ?? '') != null)
-                      OutlinedButton.icon(
-                        onPressed: () => openSource(article.paper['pdfUrl']),
-                        icon: const Icon(
-                          Icons.picture_as_pdf_outlined,
-                          size: 18,
-                        ),
-                        label: const Text('Ver PDF'),
-                      ),
-                  ],
+              if (article.documentDiscovery == 'pending')
+                const Padding(
+                  padding: EdgeInsets.only(bottom: 12),
+                  child: Text(
+                    'Buscando formatos originales de los documentos citados…',
+                    style: TextStyle(color: _muted, fontSize: 12),
+                  ),
                 ),
+              if (article.scientificPapers.isNotEmpty) ...[
+                for (final paper in article.scientificPapers) ...[
+                  if (paper['relation'] == 'reference' ||
+                      article.scientificPapers.length > 1)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8, bottom: 4),
+                      child: Text(
+                        paper['title']?.isNotEmpty == true
+                            ? paper['title']!
+                            : 'Documento científico citado',
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  Wrap(
+                    spacing: 8,
+                    children: [
+                      if (readerSourceUri(paper['htmlUrl'] ?? '') != null)
+                        OutlinedButton.icon(
+                          onPressed: () => openSource(paper['htmlUrl']),
+                          icon: const Icon(Icons.language, size: 18),
+                          label: const Text('Ver HTML'),
+                        ),
+                      if (readerSourceUri(paper['pdfUrl'] ?? '') != null)
+                        OutlinedButton.icon(
+                          onPressed: () => openSource(paper['pdfUrl']),
+                          icon: const Icon(
+                            Icons.picture_as_pdf_outlined,
+                            size: 18,
+                          ),
+                          label: const Text('Ver PDF'),
+                        ),
+                      if (readerSourceUri(
+                                paper['sourceUrl'] ??
+                                    paper['abstractUrl'] ??
+                                    '',
+                              ) !=
+                              null &&
+                          (paper['sourceUrl'] ?? paper['abstractUrl']) !=
+                              paper['pdfUrl'] &&
+                          (paper['sourceUrl'] ?? paper['abstractUrl']) !=
+                              paper['htmlUrl'])
+                        TextButton(
+                          onPressed: () => openSource(
+                            paper['sourceUrl'] ?? paper['abstractUrl'],
+                          ),
+                          child: const Text('Ficha del documento'),
+                        ),
+                    ],
+                  ),
+                ],
+                if (article.contentScope == 'paper_record' ||
+                    article.contentScope == 'paper_pdf_only')
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 12),
+                    child: Text(
+                      'Esta lectura puede limitarse a la ficha o al resumen. Consulta los formatos originales disponibles para leer el documento.',
+                      style: TextStyle(
+                        color: _muted,
+                        fontSize: 12,
+                        height: 1.5,
+                      ),
+                    ),
+                  ),
                 if (article.contentScope == 'arxiv_abstract')
                   const Padding(
                     padding: EdgeInsets.symmetric(vertical: 12),

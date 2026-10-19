@@ -43,6 +43,7 @@ export async function publicGet(
     maxBytes = 2_000_000,
     timeout = 25000,
     accept = 'text/html,application/xhtml+xml,application/xml,application/json,text/plain',
+    metadataForPdf = false,
   } = {},
 ) {
   let url = publicUrl(value);
@@ -80,6 +81,15 @@ export async function publicGet(
       if (!response.ok) {
         await response.body?.cancel();
         throw new SourceError(`http_${response.status}`);
+      }
+      if (metadataForPdf && /application\/pdf/i.test(response.headers.get('content-type') ?? '')) {
+        await response.body?.cancel();
+        return {
+          url: url.href,
+          status: response.status,
+          body: '',
+          type: response.headers.get('content-type'),
+        };
       }
       if (Number(response.headers.get('content-length') ?? 0) > maxBytes) {
         await response.body?.cancel();

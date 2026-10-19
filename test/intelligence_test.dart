@@ -24,11 +24,138 @@ class NativeFixtureService extends NewsService {
   Future<Article> detail(String id) async => article;
 }
 
+class ResolvingDocumentsService extends NewsService {
+  final Article article;
+  int calls = 0;
+  ResolvingDocumentsService(this.article);
+  @override
+  Future<Article> detail(String id) async => Article.fromJson({
+    ...article.toJson(),
+    'documentDiscovery': ++calls == 1 ? 'pending' : 'complete',
+    'papers': calls == 1
+        ? []
+        : [
+            {
+              'title': 'University study',
+              'pdfUrl': 'https://university.example/paper.pdf',
+              'relation': 'reference',
+            },
+          ],
+  });
+}
+
 void main() {
   setUp(() {
     SharedPreferences.setMockInitialValues({});
     FlutterSecureStorage.setMockInitialValues({});
   });
+  testWidgets(
+    'Older news gets documents after background discovery without blocking reading',
+    (tester) async {
+      final article = Article(
+        id: 'e' * 32,
+        title: 'Python software research',
+        url: 'https://news.example/story',
+        sourceId: 'hn',
+        region: 'Global',
+        topic: 'Software',
+        abstract: 'Resumen original',
+      );
+      final service = ResolvingDocumentsService(article);
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [newsServiceProvider.overrideWithValue(service)],
+          child: MaterialApp(home: ArticleScreen(article: article)),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.textContaining('Buscando formatos'), findsOneWidget);
+      expect(find.text('Resumen original'), findsOneWidget);
+      await tester.pump(const Duration(seconds: 2));
+      await tester.pumpAndSettle();
+      expect(find.text('Ver PDF'), findsOneWidget);
+      expect(find.textContaining('Buscando formatos'), findsNothing);
+      expect(service.calls, 2);
+    },
+  );
+  testWidgets('Closing the reader cancels document polling', (tester) async {
+    final article = Article(
+      id: 'f' * 32,
+      title: 'Python research',
+      url: 'https://news.example/story',
+      sourceId: 'hn',
+      region: 'Global',
+      topic: 'Software',
+    );
+    final service = ResolvingDocumentsService(article);
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [newsServiceProvider.overrideWithValue(service)],
+        child: MaterialApp(home: ArticleScreen(article: article)),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump(const Duration(seconds: 25));
+    expect(service.calls, 1);
+  });
+  testWidgets(
+    'News keeps its title and offers each cited document independently of publisher',
+    (tester) async {
+      final article = Article(
+        id: 'd' * 32,
+        title: 'Noticia sobre investigación en compiladores',
+        url: 'https://news.example/story',
+        sourceId: 'hn',
+        region: 'Global',
+        topic: 'Software',
+        papers: [
+          {
+            'title': 'Estudio del repositorio universitario',
+            'relation': 'reference',
+            'sourceUrl': 'https://archive.example/record/1',
+            'pdfUrl': 'http://archive.example/paper.pdf',
+          },
+          {
+            'title': 'Estudio de una revista',
+            'relation': 'reference',
+            'sourceUrl': 'https://journal.example/record/2',
+            'htmlUrl': 'https://journal.example/full/2',
+          },
+        ],
+      );
+      final local = LocalStore();
+      await local.writeArticle(article);
+      final cached = (await local.readArticle(article.id))!;
+      expect(cached.scientificPapers.length, 2);
+      expect(
+        cached.scientificPapers[0]['pdfUrl'],
+        'http://archive.example/paper.pdf',
+      );
+      expect(cached.title, article.title);
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            newsServiceProvider.overrideWithValue(
+              NativeFixtureService(article),
+            ),
+          ],
+          child: MaterialApp(home: ArticleScreen(article: article)),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text(article.title), findsOneWidget);
+      expect(
+        find.text('Estudio del repositorio universitario'),
+        findsOneWidget,
+      );
+      expect(find.text('Estudio de una revista'), findsOneWidget);
+      expect(find.text('Ver HTML'), findsOneWidget);
+      expect(find.text('Ver PDF'), findsOneWidget);
+      expect(find.text('Ficha del documento'), findsNWidgets(2));
+      expect(tester.takeException(), isNull);
+    },
+  );
   test('Canonical catalog removes old IDs and preserves the existing source switch', () async {
     final repo = DeviceSettingsRepository(LocalStore());
     await repo.save(
@@ -92,7 +219,7 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      expect(find.text('Ver HTML en arXiv'), findsOneWidget);
+      expect(find.text('Ver HTML'), findsOneWidget);
       expect(find.text('Ver PDF'), findsOneWidget);
       expect(find.textContaining('no el documento completo'), findsOneWidget);
       expect(tester.takeException(), isNull);

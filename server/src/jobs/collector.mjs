@@ -101,6 +101,8 @@ export class Collector {
         const body = native
           ? {
               blocks: [{ type: 'paragraph', text: article.nativeText }],
+              papers:
+                (await this.extractor.nativeReferences?.(article.nativeText, article.url)) ?? [],
               text: article.nativeText,
               coverage: 'native',
               extractionVersion: 2,
@@ -134,11 +136,18 @@ export class Collector {
           extractionMethod: body.extractionMethod,
           resolvedUrl: body.resolvedUrl,
           paper: body.paper,
+          papers: body.papers,
+          paperDiscoveryFailures: body.paperDiscoveryFailures,
           contentScope: body.contentScope,
           paperHtmlError: body.paperHtmlError,
           imageUrl: body.imageUrl || article.imageUrl,
         };
         this.store.save(article, 'processing');
+        if (!article.contentText?.trim()) {
+          // Keep the original document link; never summarize an unread PDF.
+          this.store.save({ ...article, lastError: 'document_text_unavailable' }, 'unavailable');
+          return true;
+        }
       }
       article = await this.editorial.evaluate(article);
       if (

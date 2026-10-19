@@ -26,6 +26,18 @@ final table = ContentBlock(
   ],
 );
 void main() {
+  test('Original documents allow public HTTP/HTTPS, embedded media remains HTTPS only', () {
+    expect(readerSourceUri('http://archive.example/paper.pdf'), isNotNull);
+    expect(readerMediaUri('http://archive.example/paper.pdf'), isNull);
+    for (final url in [
+      'file:///etc/passwd',
+      'javascript:alert(1)',
+      'http://127.0.0.1/paper',
+      'https://user:pass@archive.example/paper',
+    ]) {
+      expect(readerSourceUri(url), isNull);
+    }
+  });
   testWidgets(
     'Vertical drags starting on table cells scroll the article, horizontal drags scroll the table',
     (tester) async {
