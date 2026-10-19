@@ -66,6 +66,6 @@ La [etapa posterior de publicación limitada](piloto_automatico_2026-10-18.md) a
 - Evaluar al menos el corpus humano independiente definido en el plan; fijar umbrales sobre calibración y medir una partición final sin ajustar después.
 - Medir precisión, recuperación, ranking, falsas fusiones, calidad de resúmenes, cobertura por idioma/fuente y cola durante 7–14 días.
 - Comparar contra reglas y contra el análisis generativo de Horizon. El script entregado compara reglas/Laya; la variante generativa y nDCG requieren el experimento adicional del plan.
-- Confirmar el próximo despliegue disparado por Dokploy sobre la rama de integración; tras integrar el PR, alinear el servicio con `main` conservando el Compose completo y sus variables.
+- AutoDeploy sobre la rama de integración quedó comprobado en la etapa posterior. Tras integrar el PR en borrador, alinear el servicio con `main` conservando el Compose completo y sus variables.
 
 Las metas del plan (85% de precisión, 90% de recuperación, etc.) permanecen como objetivos sin medir.
