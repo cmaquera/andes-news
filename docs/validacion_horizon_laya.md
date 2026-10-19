@@ -60,10 +60,12 @@ El respaldo se abrió en modo de solo lectura: `PRAGMA integrity_check` devolvi�
 
 La [prueba posterior con el celular físico](prueba_celular_2026-10-18.md) documenta el diagnóstico del feed sin novedades, tres correcciones desplegadas, dos publicaciones individuales revisadas y 34 pruebas de backend aprobadas. Esa prueba no cambia el estado de sombra del piloto ni valida publicación automática general.
 
+La [etapa posterior de publicación limitada](piloto_automatico_2026-10-18.md) añade 40 pruebas de backend, diagnóstico real de 18 casos, una publicación automática con corrección semántica posterior y configuración persistente de Dokploy sobre la rama de integración. Actualiza el estado operativo sin declarar alcanzadas las metas de calidad.
+
 - Configurar usuarios, canales, feeds adicionales, repositorios, watchlists y proveedores solicitados.
 - Evaluar al menos el corpus humano independiente definido en el plan; fijar umbrales sobre calibración y medir una partición final sin ajustar después.
 - Medir precisión, recuperación, ranking, falsas fusiones, calidad de resúmenes, cobertura por idioma/fuente y cola durante 7–14 días.
 - Comparar contra reglas y contra el análisis generativo de Horizon. El script entregado compara reglas/Laya; la variante generativa y nDCG requieren el experimento adicional del plan.
-- Configurar el origen persistente de despliegue de Dokploy con estos cambios antes de un próximo redespliegue automático desde GitHub. La carpeta de ejecución nueva no publica cambios al repositorio remoto.
+- Confirmar el próximo despliegue disparado por Dokploy sobre la rama de integración; tras integrar el PR, alinear el servicio con `main` conservando el Compose completo y sus variables.
 
 Las metas del plan (85% de precisión, 90% de recuperación, etc.) permanecen como objetivos sin medir.

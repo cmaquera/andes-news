@@ -21,7 +21,21 @@ Evidencia con decisiones, tiempos, hash de la captura y procedencia: [auditoría
 - Cupo SQLite transaccional y persistente por día de Bogotá; etiqueta visible de selección automática de prueba.
 - Estado operativo autenticado y reprocesado selectivo sin promover todo el archivo.
 
-Configuración prevista para el ensayo: `INGESTION_MODE=shadow`, `EDITORIAL_MODE=shadow`, `SEMANTIC_DEDUP_MODE=shadow`, `PUBLICATION_MODE=canary`, `PILOT_DAILY_LIMIT=3`, `PILOT_MIN_SCORE=8.5`, `PILOT_SOURCE_TYPES=hackernews`.
+Configuración activada para el ensayo: `INGESTION_MODE=shadow`, `EDITORIAL_MODE=shadow`, `SEMANTIC_DEDUP_MODE=shadow`, `PUBLICATION_MODE=canary`, `PILOT_DAILY_LIMIT=3`, `PILOT_MIN_SCORE=8.5`, `PILOT_SOURCE_TYPES=hackernews`.
+
+## Ensayo real de publicación
+
+Se respaldó SQLite en `/data/before-canary-20261018.db`. Con el trabajador detenido, se reencoló únicamente el candidato oculto de KillSwitch (`7b7b800d55fc8f257f96f14a839d2774`). El trabajador volvió a evaluar el cuerpo, generó un nuevo resumen y publicó el documento automáticamente el **18/10 a las 19:17:46 de Bogotá**. La API registró `publicationKind=pilot_auto`, score **9.15**, control de resumen aprobado y `automaticToday=1`. No se utilizó la ruta de aceptación manual para esa publicación.
+
+La revisión posterior encontró un error semántico que el control heurístico **no detectó**: el resumen atribuía 66,8 puntos a los modelos evaluados en conjunto, mientras que el texto los atribuía al mejor modelo. Se corrigieron resumen y puntos clave, registrando `summaryBasis=human_review`, fecha, `summaryReviewIssues=[metric_attribution]` y una razón visible de revisión posterior. Se conserva la procedencia de publicación automática. **Este fallo impide presentar el ensayo como generación autónoma fiable** y confirma que hace falta auditoría semántica independiente.
+
+La pantalla del teléfono se actualizó a **141 lecturas**, conservando las dos noticias revisadas del paso anterior. El ensayo usa el APK 0.6.0 existente.
+
+## Consolidación de despliegue
+
+La rama autorizada `codex/horizon-laya-integration` está publicada en `cmaquera/andes-news`. Se configuró el servicio existente de Dokploy para usar esa rama y `./compose.dokploy.yaml`, manteniendo AutoDeploy y el proyecto/volumen. Se respaldó su configuración previa en un archivo privado del servidor, se verificó por hash la conservación de la credencial del móvil y se añadió la configuración necesaria de los servicios privados sin imprimir secretos.
+
+La definición de fuentes está en `/etc/dokploy/compose/andes-news-api-tvq8rl/files/horizon-sources.json`, fuera del checkout, y la variable de Dokploy usa `../files/horizon-sources.json`. El origen de un próximo despliegue queda alineado con la integración. La ejecución comprobada inicialmente se hizo por CLI; el disparo desde Dokploy debe confirmarse por su registro de despliegue. La promoción futura a `main` debe actualizar también la rama del servicio después de integrar el PR.
 
 ## Comprobaciones técnicas
 
