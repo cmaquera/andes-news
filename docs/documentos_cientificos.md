@@ -6,7 +6,7 @@ La función identifica documentos y sus formatos, sin depender de que estén alo
 
 - Metadatos Highwire/BE Press/PRISM, Dublin Core con tipo académico y JSON-LD de `ScholarlyArticle`, tesis o informe identifican la publicación. Las fuentes técnicas de referencia son las [directrices de Google Scholar](https://scholar.google.com/intl/en/scholar/inclusion.html) y [Schema.org](https://schema.org/ScholarlyArticle).
 - Los metadatos y enlaces explícitos del documento aportan HTML y PDF. Se excluyen anexos y enlaces de navegación/referencias cuando se busca el formato principal. El adaptador arXiv conserva su validación del identificador y versión.
-- En noticias se buscan DOI, citas estructuradas y enlaces explícitos a estudios/papers. Se consultan como máximo tres destinos distintos, sin seguir recursivamente sus bibliografías. Un documento repetido por DOI se presenta una sola vez.
+- En noticias se buscan DOI, citas estructuradas y enlaces explícitos a estudios/papers. También se considera la frase que rodea al enlace, para reconocer citas cuyo texto es solo el nombre de la revista. Se consultan como máximo tres destinos distintos, sin seguir recursivamente sus bibliografías. Un documento repetido por DOI se presenta una sola vez.
 - Los mensajes nativos también pueden resolver referencias científicas cuando conservan una URL en su texto. No se reconstruyen enlaces que el proveedor haya eliminado.
 - Un fallo de un destino no impide leer la noticia. Se mantienen las restricciones de URL pública, DNS, redirecciones, robots, tamaño y tiempo del cliente HTTP existente. No se ejecuta JavaScript ni se atraviesan controles de acceso.
 
@@ -20,7 +20,7 @@ Cuando se procesa una publicación nueva cuyo destino es un paper, el extractor 
 
 ## Validación
 
-Se aprobaron 60 pruebas de backend y 28 de Flutter, con análisis estático sin incidencias. Las pruebas cubren fuentes sin lista de dominios, metadatos institucionales, JSON-LD, DOI/redirecciones, múltiples documentos, preservación del texto periodístico, PDFs directos, enlaces inseguros, errores, límites de exploración/concurrencia, caché, consulta de noticias existentes y cancelación al cerrar el lector.
+Se aprobaron 61 pruebas de backend y 28 de Flutter, con análisis estático sin incidencias. Las pruebas cubren fuentes sin lista de dominios, metadatos institucionales, JSON-LD, DOI/redirecciones, múltiples documentos, preservación del texto periodístico, PDFs directos, enlaces inseguros, errores, límites de exploración/concurrencia, caché, consulta de noticias existentes y cancelación al cerrar el lector.
 
 Pruebas reales de lectura, sin modificar noticias almacenadas:
 
@@ -29,5 +29,7 @@ Pruebas reales de lectura, sin modificar noticias almacenadas:
 | [ACL Anthology](https://aclanthology.org/2023.emnlp-main.1/) | Ficha de 313 palabras y PDF anunciado; no inventa HTML completo. |
 | [DOI de esa publicación](https://doi.org/10.18653/v1/2023.emnlp-main.1) | Resuelve a ACL y obtiene el mismo PDF. |
 | [PLOS One, KerSpecGen](https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0338821) | Detecta HTML y PDF; recupera 10.086 palabras del HTML. |
+
+Las comprobaciones de ACL/PLOS también se ejecutaron desde el contenedor desplegado en Ubuntu. La consulta del PDF de ACL devolvió HTTP 200 y tipo PDF sin conservar bytes del cuerpo en la respuesta del extractor. Una consulta de documentos sobre una noticia existente respondió inicialmente como pendiente en 6 ms y terminó con estado completo; su registro original permaneció idéntico y la integridad SQLite devolvió `ok`. Es una medición puntual, no un benchmark de rendimiento. El APK 0.6.2+8 quedó instalado en el teléfono y mostró los controles genéricos «Ver HTML», «Ver PDF» y «Ficha del documento».
 
 Estos casos verifican mecanismos y formatos, no cobertura universal. Páginas sin metadatos ni enlaces reconocibles, contenido exclusivamente dinámico, destinos bloqueados, suscripciones y formatos mal anunciados pueden impedir la detección. La representación nativa de fórmulas sigue teniendo límites; el HTML/PDF original conserva su composición.

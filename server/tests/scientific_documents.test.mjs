@@ -87,6 +87,18 @@ test('A DOI or abstract landing page is not mislabeled as full HTML', () => {
   );
 });
 
+test('A journal-name anchor is recognized from its scientific sentence, without requiring the name of a repository', () => {
+  const found = scientificDocuments(
+    html(
+      '',
+      '<p>Un estudio publicado en <a href="https://unknown-journal.example/study/17">Revista de Software</a> describe el método.</p>',
+    ),
+    'https://news.example/story',
+  );
+  assert.equal(found.references[0].url, 'https://unknown-journal.example/study/17');
+  assert.equal(found.references[0].title, 'Revista de Software');
+});
+
 test('Discovery is bounded, excludes navigation and resolves only explicit scientific links', async () => {
   const links =
     '<nav><a href="https://other.example/nav">Research</a></nav><a href="/manual.pdf">Manual PDF</a><a href="https://journal.example/paper">The study</a><a href="https://doi.org/10.1234/one">Results</a><a href="https://archive.example/preprint">Research paper</a><a href="https://ignored.example/extra">Another study</a>';

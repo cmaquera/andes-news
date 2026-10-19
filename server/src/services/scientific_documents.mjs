@@ -188,7 +188,7 @@ export function scientificDocuments(html, url) {
     }
     const references = [],
       seen = new Set();
-    const add = (value, label = '', explicit = false) => {
+    const add = (value, label = '', explicit = false, context = label) => {
       const target = safe(value, url);
       if (
         !target ||
@@ -202,7 +202,7 @@ export function scientificDocuments(html, url) {
         !explicit &&
         !arxivIdentity(target) &&
         !['doi.org', 'dx.doi.org'].includes(u.hostname) &&
-        !scientificLabel.test(label)
+        !scientificLabel.test(context)
       )
         return;
       seen.add(target);
@@ -226,6 +226,7 @@ export function scientificDocuments(html, url) {
         link.getAttribute('href'),
         link.textContent,
         (link.getAttribute('rel') ?? '').split(/\s+/).includes('cite'),
+        link.closest('p,li,blockquote')?.textContent ?? link.textContent,
       );
     }
     return { paper: null, author: '', references };
