@@ -3,6 +3,7 @@ import { Readability } from '@mozilla/readability';
 import { SourceError, publicGet, RobotsPolicy } from './public_http.mjs';
 import { publicUrl } from './public_http.mjs';
 import { randomUUID } from 'node:crypto';
+import { arxivIdentity, arxivFormats } from './arxiv.mjs';
 
 const unwanted =
   'script,style,iframe,form,button,input,nav,footer,aside,noscript,svg,[role="dialog"],[aria-modal="true"],.advertisement,.ad-container,.adsbygoogle,.newsletter-signup,.related-articles,.related-posts,.article-related,[id*="cookie"],[class*="cookie"],[id*="consent"],[class*="consent"]';
@@ -262,11 +263,52 @@ export class ArticleExtractor {
         extractionMethod: 'forem-body-api',
       };
     }
+    const arxiv = arxivIdentity(url);
+    if (arxiv) url = arxiv.abstractUrl;
     await this.robots.allowed(url);
     const page = await this.get(url);
     if (!/html|xhtml/i.test(page.type)) throw new SourceError('unsupported_content');
     // Recheck the final destination too: a publisher redirect can change origins.
     await this.robots.allowed(page.url);
+    const formats = arxivFormats(page.body, page.url);
+    if (formats) {
+      const base = { paper: formats.paper, author: formats.author, extractionVersion: 3 };
+      if (formats.paper.htmlUrl) {
+        try {
+          await this.robots.allowed(formats.paper.htmlUrl);
+          const full = await this.get(formats.paper.htmlUrl);
+          await this.robots.allowed(full.url);
+          if (
+            !/html|xhtml/i.test(full.type) ||
+            arxivIdentity(full.url)?.id !== arxivIdentity(formats.paper.htmlUrl).id ||
+            !new URL(full.url).pathname.startsWith('/html/')
+          )
+            throw new SourceError('unsupported_content');
+          const extracted = extractHtml(full.body, full.url);
+          return {
+            ...extracted,
+            ...base,
+            author: formats.author || extracted.author,
+            resolvedUrl: full.url,
+            extractionMethod: 'arxiv-html',
+            contentScope: 'paper',
+          };
+        } catch (error) {
+          // An advertised HTML format can still fail or be denied by robots.
+          base.paperHtmlError = error.code ?? 'html_unavailable';
+        }
+      }
+      const extracted = extractHtml(page.body, page.url);
+      return {
+        ...extracted,
+        ...base,
+        author: formats.author || extracted.author,
+        resolvedUrl: page.url,
+        coverage: 'partial',
+        contentScope: 'arxiv_abstract',
+        extractionMethod: 'arxiv-abstract',
+      };
+    }
     return { ...extractHtml(page.body, page.url), resolvedUrl: page.url };
   }
 }

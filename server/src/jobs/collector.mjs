@@ -15,6 +15,10 @@ export class Collector {
     interval = POLL_INTERVAL,
     editorial,
     publication,
+    managedSources = (process.env.HORIZON_MANAGED_SOURCES ?? '')
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean),
   } = {}) {
     this.store = store;
     this.extractor = extractor;
@@ -24,6 +28,9 @@ export class Collector {
     this.interval = interval;
     this.editorial = editorial ?? new EditorialPolicy({ store });
     this.publication = publication ?? new PublicationPolicy({ store, now });
+    if (managedSources.some((id) => !sources.some((s) => s.id === id)))
+      throw Error('Invalid HORIZON_MANAGED_SOURCES');
+    this.managedSources = new Set(managedSources);
     if (this.editorial.mode === 'shadow') this.store.hideShadowNegatives();
     this.discovering = false;
     this.processing = false;
@@ -39,6 +46,7 @@ export class Collector {
       filtered = 0;
     try {
       for (const source of sources) {
+        if (this.managedSources.has(source.id)) continue;
         try {
           const candidates = await this.load(source);
           let selected = 0;
@@ -125,6 +133,9 @@ export class Collector {
           fetchedAt: body.fetchedAt,
           extractionMethod: body.extractionMethod,
           resolvedUrl: body.resolvedUrl,
+          paper: body.paper,
+          contentScope: body.contentScope,
+          paperHtmlError: body.paperHtmlError,
           imageUrl: body.imageUrl || article.imageUrl,
         };
         this.store.save(article, 'processing');
@@ -138,6 +149,14 @@ export class Collector {
       ) {
         // Retain the decision/body for review without spending summary and
         // translation inference on hidden rejected, uncertain or failed items.
+        this.store.save(article, 'filtered');
+        return true;
+      }
+      const exact = this.store.findContentDuplicate(article);
+      if (exact) {
+        article.dedupMethod = 'content_hash';
+        article.duplicateOf = exact.id;
+        article.editorialStatus = 'duplicate';
         this.store.save(article, 'filtered');
         return true;
       }

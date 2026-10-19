@@ -73,7 +73,7 @@ export class PublicationPolicy {
     if (this.mode !== 'canary' || !article.ingestionShadow || article.status !== 'ready')
       return false;
     const eligible =
-      article.sourceId?.startsWith('horizon:') &&
+      (article.ingestionProducer === 'horizon' || article.sourceId?.startsWith('horizon:')) &&
       this.sourceTypes.includes(article.sourceType) &&
       article.evaluationVersion === EDITORIAL_VERSION &&
       article.editorialStatus === 'accepted' &&

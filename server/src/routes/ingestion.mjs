@@ -38,6 +38,7 @@ const item = {
     title: { type: 'string', minLength: 1, maxLength: 1000 },
     nativeText: { type: 'string', maxLength: 32000 },
     sourceName: { type: 'string', maxLength: 200 },
+    sourceFeedUrl: string,
     author: { type: 'string', maxLength: 200 },
     publishedAt: { type: 'string', maxLength: 40 },
     fetchedAt: { type: 'string', maxLength: 40 },
@@ -144,7 +145,13 @@ export function createIngestionApi({ store, token, mode = 'shadow', logger = fal
           const sourceUrl = canonicalUrl(entry.sourceUrl),
             url = canonicalUrl(entry.targetUrl ?? sourceUrl);
           if (!Number.isFinite(Date.parse(entry.publishedAt))) throw Error('invalid_date');
-          normalized.push({ ...entry, sourceUrl, url, index });
+          normalized.push({
+            ...entry,
+            sourceUrl,
+            url,
+            ...(entry.sourceFeedUrl ? { sourceFeedUrl: canonicalUrl(entry.sourceFeedUrl) } : {}),
+            index,
+          });
           return { index, status: 'accepted' };
         } catch (_) {
           return { index, status: 'rejected', error: 'invalid_item_url_or_date' };

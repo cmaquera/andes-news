@@ -2,13 +2,20 @@ const defaultAndesEndpoint = 'https://andes-news.cmaquera.com';
 
 class NewsSource {
   final String id, name, region;
-  const NewsSource(this.id, this.name, this.region);
+  final List<String> aliases;
+  const NewsSource(this.id, this.name, this.region, {this.aliases = const []});
   factory NewsSource.fromJson(Map<String, dynamic> j) => NewsSource(
     j['id'] as String,
     j['name'] as String,
     j['region'] as String? ?? 'Global',
+    aliases: (j['aliases'] as List? ?? []).cast<String>(),
   );
-  Map<String, dynamic> toJson() => {'id': id, 'name': name, 'region': region};
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'name': name,
+    'region': region,
+    'aliases': aliases,
+  };
 }
 
 const sources = [
@@ -85,6 +92,8 @@ class TableCellData {
 }
 
 class Article {
+  final Map<String, String> paper;
+  final String contentScope, summaryScope;
   final String sourceLabel, contentKind, editorialStatus;
   final double? editorialScore;
   final List<String> selectionReasons;
@@ -115,6 +124,9 @@ class Article {
     required this.sourceId,
     required this.region,
     required this.topic,
+    this.contentScope = '',
+    this.summaryScope = '',
+    Map<String, String> paper = const {},
     this.sourceLabel = '',
     this.contentKind = 'article',
     this.editorialStatus = '',
@@ -135,7 +147,8 @@ class Article {
     List<ContentBlock> content = const [],
     List<ContentBlock> translatedContent = const [],
     List<String> keyPoints = const [],
-  }) : selectionReasons = List.unmodifiable(selectionReasons),
+  }) : paper = Map.unmodifiable(paper),
+       selectionReasons = List.unmodifiable(selectionReasons),
        sourceOccurrences = List.unmodifiable(
          sourceOccurrences.map((s) => Map<String, dynamic>.unmodifiable(s)),
        ),
@@ -161,6 +174,9 @@ class Article {
     'sourceOccurrences': sourceOccurrences,
     'region': region,
     'topic': topic,
+    'paper': paper,
+    'contentScope': contentScope,
+    'summaryScope': summaryScope,
     'imageUrl': imageUrl,
     'published': published?.toIso8601String(),
     'score': score,
@@ -192,6 +208,11 @@ class Article {
         .toList(),
     region: j['region'],
     topic: j['topic'],
+    paper: (j['paper'] as Map? ?? {}).map(
+      (k, v) => MapEntry(k.toString(), v.toString()),
+    ),
+    contentScope: j['contentScope'] ?? '',
+    summaryScope: j['summaryScope'] ?? '',
     imageUrl: j['imageUrl'] ?? '',
     published: DateTime.tryParse(j['published'] ?? ''),
     score: j['score'] ?? 0,

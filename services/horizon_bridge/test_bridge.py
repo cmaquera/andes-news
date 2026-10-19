@@ -20,6 +20,11 @@ def story(kind=SourceType.TELEGRAM, **changes):
 
 
 class BridgeTests(unittest.TestCase):
+    def test_rss_feed_identity_is_preserved_without_exposing_it_as_display_name(self):
+        result = normalize(story(kind=SourceType.RSS), 'rss:Genbeta:abc', 'https://www.genbeta.com/rss2.xml')
+        self.assertEqual(result['sourceFeedUrl'], 'https://www.genbeta.com/rss2.xml')
+        self.assertTrue(result['sourceInstanceId'].startswith('rss:'))
+
     def test_unconfigured_optional_source_does_not_stop_other_sources(self):
         class Good:
             async def fetch(self, since):

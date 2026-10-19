@@ -65,6 +65,17 @@ test('Summary checks flag known defects without claiming to prove factual accura
   assert.equal(checkSummary({ ...a, abstract: '' }).status, 'review');
 });
 
+test('Canonical publisher IDs keep Horizon publication eligibility without admitting legacy collection', (t) => {
+  const store = new Store(':memory:');
+  t.after(() => store.close());
+  const policy = new PublicationPolicy({ store, mode: 'canary' });
+  assert.equal(policy.publish(prepared(store, 'legacy', { sourceId: 'hn' })), false);
+  assert.equal(
+    policy.publish(prepared(store, 'horizon', { sourceId: 'hn', ingestionProducer: 'horizon' })),
+    true,
+  );
+});
+
 test('Canary publishes only eligible prepared documents and enforces a persistent Bogotá daily quota', (t) => {
   const store = new Store(':memory:');
   t.after(() => store.close());

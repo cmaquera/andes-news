@@ -67,10 +67,14 @@ class SettingsController extends Notifier<SettingsState> {
   Future<void> mergeCatalog(List<NewsSource> catalog) async {
     if (catalog.isEmpty || state.saving) return;
     final known = state.value.catalog.map((s) => s.id).toSet();
-    final selected = {
-      ...state.value.enabledSources,
-      ...catalog.where((s) => !known.contains(s.id)).map((s) => s.id),
-    };
+    final selected = <String>{};
+    for (final source in catalog) {
+      final oldIds = {source.id, ...source.aliases}.intersection(known);
+      final enabled = known.contains(source.id)
+          ? state.value.enabledSources.contains(source.id)
+          : oldIds.isEmpty || oldIds.any(state.value.enabledSources.contains);
+      if (enabled) selected.add(source.id);
+    }
     await _save(
       state.value.copyWith(catalog: catalog, enabledSources: selected),
     );

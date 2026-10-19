@@ -16,6 +16,7 @@ services:
       PILOT_DAILY_LIMIT: ${PILOT_DAILY_LIMIT:-3}
       PILOT_MIN_SCORE: ${PILOT_MIN_SCORE:-8.5}
       PILOT_SOURCE_TYPES: ${PILOT_SOURCE_TYPES:-hackernews}
+      HORIZON_MANAGED_SOURCES: ${HORIZON_MANAGED_SOURCES:-hn,genbeta,github}
     networks:
       - dokploy-network
       - andes-services

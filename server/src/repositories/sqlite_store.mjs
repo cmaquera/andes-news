@@ -4,8 +4,12 @@ import { mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { publicUrl } from '../services/public_http.mjs';
 import { assessFocus, FOCUS_VERSION } from '../services/focus.mjs';
+import { sourceIdentity, sourceCatalog } from '../services/source_identity.mjs';
+import { arxivIdentity } from '../services/arxiv.mjs';
 export function canonicalUrl(value) {
   const url = publicUrl(value);
+  const paper = arxivIdentity(url.href);
+  if (paper) return paper.abstractUrl;
   url.hash = '';
   for (const key of [...url.searchParams.keys()])
     if (key.startsWith('utm_') || key === 'fbclid') url.searchParams.delete(key);
@@ -141,12 +145,17 @@ export class Store {
       .all(article.id, article.id);
     return {
       ...article,
+      sourceId: sourceIdentity(article).id,
+      sourceName: sourceIdentity(article).name,
       sourceOccurrences: rows.map((r) => {
         const item = JSON.parse(r.data);
+        const source = sourceIdentity(item);
         return {
-          sourceId: item.sourceId,
-          sourceName: item.sourceName,
+          sourceId: source.id,
+          sourceName: source.name,
           sourceType: item.sourceType,
+          ingestionProducer: 'horizon',
+          sourceInstanceId: item.sourceInstanceId,
           sourceUrl: item.sourceUrl,
           comments: item.comments ?? [],
         };
@@ -161,7 +170,8 @@ export class Store {
     this.db.exec('BEGIN IMMEDIATE');
     try {
       for (const item of items) {
-        const sourceId = `horizon:${item.sourceType}:${createHash('sha256').update(item.sourceInstanceId).digest('hex').slice(0, 12)}`;
+        const identity = sourceIdentity(item),
+          sourceId = identity.id;
         const previous = this.db
           .prepare(
             'SELECT article_id,data FROM source_occurrences WHERE source=? AND external_id=?',
@@ -171,8 +181,11 @@ export class Store {
           title: item.title,
           url: item.url,
           sourceId,
-          sourceName: item.sourceName ?? item.sourceInstanceId,
+          sourceName: identity.name,
+          sourceFeedUrl: item.sourceFeedUrl,
           sourceType: item.sourceType,
+          ingestionProducer: 'horizon',
+          sourceInstanceId: item.sourceInstanceId,
           sourceUrl: item.sourceUrl,
           contentKind: item.contentKind,
           nativeText: item.nativeText ?? '',
@@ -260,22 +273,15 @@ export class Store {
     }
   }
   sourceCatalog() {
-    return this.db
-      .prepare(
-        "SELECT data FROM source_occurrences WHERE article_id IN (SELECT id FROM articles WHERE COALESCE(json_extract(data,'$.ingestionShadow'),0)=0)",
-      )
-      .all()
-      .map((r) => JSON.parse(r.data))
-      .reduce((catalog, x) => {
-        if (!catalog.some((s) => s.id === x.sourceId))
-          catalog.push({
-            id: x.sourceId,
-            name: x.sourceName,
-            region: 'Global',
-            kind: x.sourceType,
-          });
-        return catalog;
-      }, []);
+    return sourceCatalog(
+      this.db
+        .prepare(
+          "SELECT data FROM source_occurrences WHERE article_id IN (SELECT id FROM articles WHERE COALESCE(json_extract(data,'$.ingestionShadow'),0)=0)",
+        )
+        .all()
+        .map((r) => JSON.parse(r.data)),
+      false,
+    );
   }
   publishPilot(id, { day, at, limit }) {
     this.db.exec('BEGIN IMMEDIATE');
@@ -339,7 +345,7 @@ export class Store {
   recentPrepared(id) {
     return this.db
       .prepare(
-        "SELECT data FROM articles WHERE id<>? AND state='ready' AND json_extract(data,'$.editorialStatus')='accepted' AND COALESCE(json_extract(data,'$.ingestionShadow'),0)=0 AND updated>? ORDER BY updated DESC LIMIT 100",
+        "SELECT data FROM articles WHERE id<>? AND state='ready' AND json_extract(data,'$.relevance.accepted')=1 AND COALESCE(json_extract(data,'$.ingestionShadow'),0)=0 AND updated>? ORDER BY updated DESC LIMIT 100",
       )
       .all(id, Date.now() - 72 * 3600000)
       .map((r) => JSON.parse(r.data));

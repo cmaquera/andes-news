@@ -89,6 +89,8 @@ test('Private ingress accepts ten source types, authenticates and replays atomic
   assert.equal(first.json().results.length, 10);
   assert.equal(store.counts().queued, 1);
   const id = first.json().results[0].articleId;
+  assert.equal(store.get(id).sourceId, 'hn');
+  assert.equal(store.get(id).ingestionProducer, 'horizon');
   assert.equal(store.get(id).sourceOccurrences.length, 10);
   assert.deepEqual((await post(payload)).json(), first.json());
   assert.equal((await post({ ...payload, items: [entry()] })).statusCode, 409);

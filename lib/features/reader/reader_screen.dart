@@ -54,12 +54,11 @@ class _ReaderState extends ConsumerState<ArticleScreen> {
 
   Future<void> load() =>
       ref.read(readerProvider(widget.article).notifier).refresh();
-  Future<void> openSource() async {
+  Future<void> openSource([String? url]) async {
     try {
-      if (await launchUrl(
-        Uri.parse(article.url),
-        mode: LaunchMode.externalApplication,
-      )) {
+      final uri = readerMediaUri(url ?? article.url);
+      if (uri == null) throw const FormatException('Invalid source URL');
+      if (await launchUrl(uri, mode: LaunchMode.externalApplication)) {
         return;
       }
     } catch (_) {}
@@ -226,6 +225,54 @@ class _ReaderState extends ConsumerState<ArticleScreen> {
                     style: TextStyle(color: _muted, fontSize: 12),
                   ),
                 ),
+              if (article.paper.isNotEmpty) ...[
+                Wrap(
+                  spacing: 8,
+                  children: [
+                    if (readerMediaUri(article.paper['htmlUrl'] ?? '') != null)
+                      OutlinedButton.icon(
+                        onPressed: () => openSource(article.paper['htmlUrl']),
+                        icon: const Icon(Icons.language, size: 18),
+                        label: const Text('Ver HTML en arXiv'),
+                      ),
+                    if (readerMediaUri(article.paper['pdfUrl'] ?? '') != null)
+                      OutlinedButton.icon(
+                        onPressed: () => openSource(article.paper['pdfUrl']),
+                        icon: const Icon(
+                          Icons.picture_as_pdf_outlined,
+                          size: 18,
+                        ),
+                        label: const Text('Ver PDF'),
+                      ),
+                  ],
+                ),
+                if (article.contentScope == 'arxiv_abstract')
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 12),
+                    child: Text(
+                      'La lectura recuperada contiene la ficha y el resumen de arXiv, no el documento completo. Consulta los formatos originales disponibles.',
+                      style: TextStyle(
+                        color: _muted,
+                        fontSize: 12,
+                        height: 1.5,
+                      ),
+                    ),
+                  ),
+                if (article.summaryScope == 'arxiv_abstract' &&
+                    article.contentScope != 'arxiv_abstract')
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 12),
+                    child: Text(
+                      'Este abstracto se preparó con la ficha de arXiv. La lectura original incluye ahora el HTML del documento.',
+                      style: TextStyle(
+                        color: _muted,
+                        fontSize: 12,
+                        height: 1.5,
+                      ),
+                    ),
+                  ),
+                const SizedBox(height: 12),
+              ],
               SegmentedButton<String>(
                 segments: [
                   const ButtonSegment(
@@ -311,6 +358,8 @@ class _ReaderState extends ConsumerState<ArticleScreen> {
                 Text(
                   article.abstract.isEmpty
                       ? 'Procesamiento automático en el servidor.'
+                      : article.summaryScope == 'arxiv_abstract'
+                      ? 'Abstracto preparado a partir de la ficha de arXiv. Consulta el documento original para verificar los detalles.'
                       : 'Abstracto generado por IA a partir de todas las partes del cuerpo recuperado. Consulta la lectura para verificar los detalles.',
                   style: const TextStyle(
                     color: _muted,
@@ -391,7 +440,7 @@ class _ReaderState extends ConsumerState<ArticleScreen> {
                 ),
               ),
               TextButton.icon(
-                onPressed: openSource,
+                onPressed: () => openSource(),
                 icon: const Icon(Icons.open_in_new, size: 16),
                 label: const Text('Abrir sitio original (opcional)'),
               ),

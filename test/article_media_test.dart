@@ -26,6 +26,61 @@ final table = ContentBlock(
   ],
 );
 void main() {
+  testWidgets(
+    'Vertical drags starting on table cells scroll the article, horizontal drags scroll the table',
+    (tester) async {
+      tester.view.physicalSize = const Size(390, 844);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final vertical = ScrollController();
+      addTearDown(vertical.dispose);
+      final longTable = ContentBlock(
+        'table',
+        '',
+        rows: List.generate(
+          25,
+          (row) => List.generate(6, (col) => TableCellData('Cell $row/$col')),
+        ),
+      );
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: ListView(
+              controller: vertical,
+              children: [
+                ReaderTable(longTable, fontSize: 18),
+                const SizedBox(height: 1000),
+              ],
+            ),
+          ),
+        ),
+      );
+      final horizontal = tester.state<ScrollableState>(
+        find
+            .descendant(
+              of: find.byType(ReaderTable),
+              matching: find.byType(Scrollable),
+            )
+            .first,
+      );
+      await tester.dragFrom(
+        tester.getCenter(find.text('Cell 2/0')),
+        const Offset(-220, 0),
+      );
+      await tester.pumpAndSettle();
+      expect(horizontal.position.pixels, greaterThan(100));
+      expect(vertical.offset, 0);
+      await tester.dragFrom(const Offset(170, 180), const Offset(0, -220));
+      await tester.pumpAndSettle();
+      expect(vertical.offset, greaterThan(100));
+      final x = horizontal.position.pixels;
+      await tester.dragFrom(const Offset(170, 180), const Offset(0, 140));
+      await tester.pumpAndSettle();
+      expect(horizontal.position.pixels, closeTo(x, 1));
+      expect(tester.takeException(), isNull);
+    },
+  );
   test('Media metadata and table spans survive offline serialization', () {
     final blocks = [
       table,

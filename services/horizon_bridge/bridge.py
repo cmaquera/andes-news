@@ -66,7 +66,7 @@ def plain(value):
     return unescape(BeautifulSoup(str(value or ""), "html.parser").get_text(" ", strip=True))
 
 
-def normalize(item, instance):
+def normalize(item, instance, feed_url=None):
     kind = item.source_type.value
     meta = item.metadata
     url = str(item.url)
@@ -86,6 +86,7 @@ def normalize(item, instance):
     return {
         "sourceInstanceId": f"{kind}:{source_key}", "sourceType": kind,
         "sourceName": instance[:200],
+        **({"sourceFeedUrl": str(feed_url)} if feed_url else {}),
         "externalId": hashlib.sha256(item.id.encode()).hexdigest(),
         "contentKind": content_kind,
         # Social content is identified by its permalink, never an incidental link.
@@ -153,7 +154,10 @@ def jobs(config, client):
             for entry in value:
                 if entry.enabled:
                     identity = f"{entry.name}:{hashlib.sha256(str(entry.url).encode()).hexdigest()[:12]}" if kind == "rss" else f"{entry.type}:{entry.username or entry.owner}:{entry.repo or ''}"
-                    yield kind, f"{kind}:{identity}", cls([entry], client)
+                    scraper = cls([entry], client)
+                    if kind == "rss":
+                        scraper.andes_feed_url = str(entry.url)
+                    yield kind, f"{kind}:{identity}", scraper
         elif value and value.enabled:
             if kind == "twitter":
                 if value.mode != "apify":
@@ -198,7 +202,7 @@ async def collect(config, since, factory=jobs, transport=None):
                         scraper.append_discussion_content(entry, replies)
                 for entry in entries[:100]:
                     try:
-                        items.append(normalize(entry, identity))
+                        items.append(normalize(entry, identity, getattr(scraper, 'andes_feed_url', None)))
                     except (ValueError, TypeError):
                         report.append({"source": identity, "status": "invalid_item"})
                 failed = getattr(client._transport, "failures", 0) > before

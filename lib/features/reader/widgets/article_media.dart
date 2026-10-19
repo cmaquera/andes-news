@@ -328,7 +328,9 @@ class ReaderTable extends StatelessWidget {
                 tops.add(tops.last + h);
               }
               return SingleChildScrollView(
+                primary: false,
                 scrollDirection: Axis.horizontal,
+                physics: const ClampingScrollPhysics(),
                 child: SizedBox(
                   width: width,
                   height: tops.last,
@@ -351,10 +353,10 @@ class ReaderTable extends StatelessWidget {
                                   width: 0.5,
                                 ),
                               ),
-                              child: SelectableText(
-                                p.cell.text,
-                                style: style(p.cell),
-                              ),
+                              // SelectableText creates an inner vertical
+                              // scrollable per cell that competes with the
+                              // article's vertical drag gesture on Android.
+                              child: Text(p.cell.text, style: style(p.cell)),
                             ),
                           ),
                         )

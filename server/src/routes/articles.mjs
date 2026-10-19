@@ -1,7 +1,7 @@
-import { sources } from '../config/sources.mjs';
 import { APP_VERSION } from '../config/env.mjs';
 import { pagination, articleId } from '../schemas/articles.mjs';
 import { SOURCE_TYPES } from './ingestion.mjs';
+import { sourceCatalog } from '../services/source_identity.mjs';
 
 export async function articleRoutes(app, { store, collector, editorial = false }) {
   app.get('/', { config: { public: true } }, async () => ({
@@ -11,7 +11,7 @@ export async function articleRoutes(app, { store, collector, editorial = false }
   }));
   app.get('/health', { config: { public: true } }, async () => ({ status: 'ok' }));
   app.get('/sources', async () => ({
-    sources: [...sources, ...store.sourceCatalog()],
+    sources: sourceCatalog(store.sourceCatalog()),
     supportedTypes: SOURCE_TYPES,
   }));
   app.get('/status', async () => ({

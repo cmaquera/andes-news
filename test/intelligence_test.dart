@@ -29,6 +29,75 @@ void main() {
     SharedPreferences.setMockInitialValues({});
     FlutterSecureStorage.setMockInitialValues({});
   });
+  test('Canonical catalog removes old IDs and preserves the existing source switch', () async {
+    final repo = DeviceSettingsRepository(LocalStore());
+    await repo.save(
+      ConnectionSettings(
+        token: 'x' * 32,
+        catalog: [
+          ...sources,
+          const NewsSource('horizon:hackernews:old', 'hackernews', 'Global'),
+        ],
+        enabledSources: {'genbeta', 'horizon:hackernews:old'},
+      ),
+    );
+    final container = ProviderContainer(
+      overrides: [settingsRepositoryProvider.overrideWithValue(repo)],
+    );
+    addTearDown(container.dispose);
+    final controller = container.read(settingsProvider.notifier);
+    await controller.initialize();
+    await controller.mergeCatalog([
+      const NewsSource(
+        'hn',
+        'Hacker News',
+        'Global',
+        aliases: ['horizon:hackernews:old'],
+      ),
+      const NewsSource('genbeta', 'Genbeta', 'Global'),
+    ]);
+    final saved = await repo.read();
+    expect(saved.enabledSources, {'genbeta'});
+    expect(saved.catalog.map((s) => s.id), ['hn', 'genbeta']);
+    expect(saved.catalog.first.aliases, ['horizon:hackernews:old']);
+  });
+  testWidgets(
+    'Scientific paper exposes advertised HTML and PDF and keeps them offline',
+    (tester) async {
+      final article = Article(
+        id: 'c' * 32,
+        title: 'Software agents',
+        url: 'https://arxiv.org/abs/2610.18861',
+        sourceId: 'hn',
+        region: 'Global',
+        topic: 'IA',
+        contentScope: 'arxiv_abstract',
+        paper: {
+          'id': '2610.18861',
+          'pdfUrl': 'https://arxiv.org/pdf/2610.18861',
+          'htmlUrl': 'https://arxiv.org/html/2610.18861v1',
+        },
+      );
+      final local = LocalStore();
+      await local.writeArticle(article);
+      expect((await local.readArticle(article.id))!.paper, article.paper);
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            newsServiceProvider.overrideWithValue(
+              NativeFixtureService(article),
+            ),
+          ],
+          child: MaterialApp(home: ArticleScreen(article: article)),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Ver HTML en arXiv'), findsOneWidget);
+      expect(find.text('Ver PDF'), findsOneWidget);
+      expect(find.textContaining('no el documento completo'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
   testWidgets(
     'Native reader shows editorial reason and publication label on a narrow screen',
     (tester) async {
