@@ -70,7 +70,7 @@ void main() {
       await tester.scrollUntilVisible(
         find.text('Texto nativo de la publicación'),
         150,
-      scrollable: find.byType(Scrollable).first,
+        scrollable: find.byType(Scrollable).first,
       );
       expect(find.text('Texto nativo de la publicación'), findsOneWidget);
       expect(tester.takeException(), isNull);
