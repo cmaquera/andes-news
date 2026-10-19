@@ -4,6 +4,7 @@ import { OllamaModel, detectLanguage } from '../services/ollama.mjs';
 import { assessFocus } from '../services/focus.mjs';
 import { EditorialPolicy } from '../services/editorial.mjs';
 import { PublicationPolicy, checkSummary } from '../services/publication.mjs';
+import { isScientificDocument } from '../services/reading_policy.mjs';
 export const POLL_INTERVAL = 2 * 60 * 60 * 1000;
 export class Collector {
   constructor({
@@ -95,7 +96,13 @@ export class Collector {
     this.processing = true;
     this.store.save(article, 'processing');
     try {
-      if (!article.contentText || article.needsRichExtraction) {
+      if (
+        !article.contentText ||
+        article.needsRichExtraction ||
+        (isScientificDocument(article) &&
+          !article.abstract &&
+          article.summaryScope !== 'paper_abstract')
+      ) {
         const native =
           article.contentKind && article.contentKind !== 'article' && article.nativeText?.trim();
         const body = native
@@ -139,6 +146,8 @@ export class Collector {
           papers: body.papers,
           paperDiscoveryFailures: body.paperDiscoveryFailures,
           contentScope: body.contentScope,
+          readingMode: body.readingMode,
+          summaryScope: body.summaryScope,
           paperHtmlError: body.paperHtmlError,
           imageUrl: body.imageUrl || article.imageUrl,
         };
@@ -192,11 +201,17 @@ export class Collector {
       if (!article.abstract) {
         article = {
           ...article,
-          ...(await this.model.summarize(article.title, article.contentText)),
+          ...(await this.model.summarize(article.title, article.contentText, {
+            scientific: isScientificDocument(article),
+          })),
         };
         this.store.save(article, 'processing');
       }
-      if (article.language !== 'es' && !article.translatedContent?.length) {
+      if (isScientificDocument(article)) {
+        article.readingMode = 'scientific_links';
+        article.content = [];
+        article.translatedContent = [];
+      } else if (article.language !== 'es' && !article.translatedContent?.length) {
         article.translatedContent = await this.model.translate(article.content);
         this.store.save(article, 'processing');
       }

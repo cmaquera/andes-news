@@ -65,15 +65,48 @@ function records(doc) {
   return rows;
 }
 
+function authorAbstract(doc, schemas = records(doc)) {
+  const candidates = [];
+  for (const node of doc.querySelectorAll('meta[name],meta[property]')) {
+    const name = (node.getAttribute('name') ?? node.getAttribute('property')).toLowerCase();
+    if (
+      ['citation_abstract', 'dc.description', 'dcterms.abstract', 'dcterms.description'].includes(
+        name,
+      )
+    )
+      candidates.push(node.content);
+  }
+  for (const node of doc.querySelectorAll(
+    '.abstract,.ltx_abstract,.acl-abstract,[role="doc-abstract"],#abstract,[id^="Abs"]',
+  )) {
+    const copy = node.cloneNode(true);
+    copy
+      .querySelectorAll('h1,h2,h3,h4,.descriptor,script,style,annotation,annotation-xml')
+      .forEach((n) => n.remove());
+    candidates.push(copy.textContent);
+  }
+  for (const schema of schemas)
+    if (schema.abstract)
+      candidates.push(typeof schema.abstract === 'string' ? schema.abstract : schema.abstract.text);
+  return candidates.map(clean).find((s) => s.length >= 80) ?? '';
+}
+
 // Metadata identifies the document; ordinary PDF links in a news story do not.
 export function scientificDocuments(html, url) {
   const arxiv = arxivFormats(html, url);
-  if (arxiv)
-    return {
-      paper: { ...arxiv.paper, sourceUrl: url, provider: 'arXiv', relation: 'document' },
-      author: arxiv.author,
-      references: [],
-    };
+  if (arxiv) {
+    const dom = new JSDOM(html, { url });
+    try {
+      return {
+        paper: { ...arxiv.paper, sourceUrl: url, provider: 'arXiv', relation: 'document' },
+        author: arxiv.author,
+        abstract: authorAbstract(dom.window.document),
+        references: [],
+      };
+    } finally {
+      dom.window.close();
+    }
+  }
   const dom = new JSDOM(html, { url });
   try {
     const doc = dom.window.document,
@@ -184,7 +217,12 @@ export function scientificDocuments(html, url) {
           'meta[name="citation_author"],meta[name="bepress_citation_author"]',
         ),
       ].map((n) => n.content);
-      return { paper, author: authors.join(', '), references: [] };
+      return {
+        paper,
+        author: authors.join(', '),
+        abstract: authorAbstract(doc, schemas),
+        references: [],
+      };
     }
     const references = [],
       seen = new Set();

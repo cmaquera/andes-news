@@ -1,4 +1,4 @@
-# Documentos científicos de múltiples fuentes — Andes 0.6.2
+# Documentos científicos de múltiples fuentes — Andes 0.6.3
 
 La función identifica documentos y sus formatos, sin depender de que estén alojados en arXiv. Si una noticia cita una investigación, conserva el texto y el resumen de la noticia y ofrece los documentos citados por separado. Si la URL corresponde al propio paper, ofrece su ficha y los formatos publicados. El HTML se muestra como formato completo solo cuando la publicación lo anuncia o tiene señales de cuerpo completo; una ficha de resumen no se convierte en HTML completo por el mero hecho de ser una página web.
 
@@ -16,20 +16,24 @@ La API añade `papers`, una lista con título, fuente, relación (`document` o `
 
 Para noticias ya procesadas, abrir el lector inicia una consulta de formatos en segundo plano. Su resultado se almacena en una caché independiente: no modifica el cuerpo, resumen ni decisión editorial de la noticia. El lector consulta el resultado cada dos segundos, hasta diez veces, sin bloquear la lectura; al cerrarlo cancela las consultas. Si tarda más, se puede actualizar la lectura después. La API limita la exploración a dos trabajos simultáneos y veinte pendientes; los resultados completos caducan a las 24 horas y los fallos se reintentan tras diez minutos.
 
-Cuando se procesa una publicación nueva cuyo destino es un paper, el extractor prefiere el HTML completo anunciado. Si solo obtiene la ficha, marca cobertura parcial. Un PDF directo queda accesible como documento original sin descargar todo su cuerpo para inferencia ni fabricar un resumen de texto no leído. Los enlaces PDF se abren en el visor externo del dispositivo; esta versión no incorpora conversión PDF a texto ni descarga de PDFs para lectura sin conexión. La caché guarda los enlaces y el contenido HTML recuperado, no los archivos PDF.
+Cuando la publicación es el propio paper, Andes muestra un resumen en español y los enlaces originales HTML/PDF/ficha. El extractor usa únicamente el resumen publicado por los autores (metadatos o sección de abstract), con alcance `paper_abstract`, para preparar una explicación de objetivo, enfoque, aportación y resultados atribuidos a los autores. No sigue el HTML alternativo para reconstruir el documento ni traduce su cuerpo, fórmulas, tablas o apéndices. Si la ficha es a la vez el HTML completo, se utiliza solo su sección de abstract. Si no se encuentra ese texto, conserva los enlaces sin inventar un resumen desde el titular.
+
+El lector de papers no ofrece «Artículo limpio» ni «Leer dentro de Andes». Esta política también se aplica a papers guardados con cuerpos reconstruidos de versiones anteriores: la API omite sus bloques y traducciones, y Flutter los oculta incluso desde su caché anterior. Los resúmenes existentes se conservan. Las noticias normales —incluidas las que citan investigaciones— mantienen el lector limpio y su traducción; sus documentos citados se abren por separado.
+
+Un PDF directo queda accesible como original sin descargar todo su cuerpo para inferencia ni fabricar un resumen de texto no leído. Los enlaces PDF se abren en el visor externo del dispositivo; esta versión no incorpora conversión PDF a texto ni descarga de PDFs para lectura sin conexión.
 
 ## Validación
 
-Se aprobaron 61 pruebas de backend y 28 de Flutter, con análisis estático sin incidencias. Las pruebas cubren fuentes sin lista de dominios, metadatos institucionales, JSON-LD, DOI/redirecciones, múltiples documentos, preservación del texto periodístico, PDFs directos, enlaces inseguros, errores, límites de exploración/concurrencia, caché, consulta de noticias existentes y cancelación al cerrar el lector.
+Se aprobaron 65 pruebas de backend y 28 de Flutter, con análisis estático sin incidencias. Además de la detección y consulta de formatos, se comprueba que los papers no solicitan el HTML completo, no reconstruyen tablas ni traducen el cuerpo; que la preparación usa el abstract de autor con instrucciones en español; y que las lecturas antiguas ocultan sus cuerpos sin modificar el resumen o registro original. Las pruebas de noticias normales y noticias con referencias siguen pasando.
 
 Pruebas reales de lectura, sin modificar noticias almacenadas:
 
 | Destino | Resultado observado |
 | --- | --- |
-| [ACL Anthology](https://aclanthology.org/2023.emnlp-main.1/) | Ficha de 313 palabras y PDF anunciado; no inventa HTML completo. |
+| [ACL Anthology](https://aclanthology.org/2023.emnlp-main.1/) | Resumen de autor de 192 palabras y PDF anunciado. |
 | [DOI de esa publicación](https://doi.org/10.18653/v1/2023.emnlp-main.1) | Resuelve a ACL y obtiene el mismo PDF. |
-| [PLOS One, KerSpecGen](https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0338821) | Detecta HTML y PDF; recupera 10.086 palabras del HTML. |
+| [PLOS One, KerSpecGen](https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0338821) | Detecta HTML/PDF y usa 205 palabras del abstract de autor, frente a las 10.086 palabras reconstruidas en 0.6.2. |
 
 Las comprobaciones de ACL/PLOS también se ejecutaron desde el contenedor desplegado en Ubuntu. La consulta del PDF de ACL devolvió HTTP 200 y tipo PDF sin conservar bytes del cuerpo en la respuesta del extractor. Una consulta de documentos sobre una noticia existente respondió inicialmente como pendiente en 6 ms y terminó con estado completo; su registro original permaneció idéntico y la integridad SQLite devolvió `ok`. Es una medición puntual, no un benchmark de rendimiento. El APK 0.6.2+8 quedó instalado en el teléfono y mostró los controles genéricos «Ver HTML», «Ver PDF» y «Ficha del documento».
 
-Estos casos verifican mecanismos y formatos, no cobertura universal. Páginas sin metadatos ni enlaces reconocibles, contenido exclusivamente dinámico, destinos bloqueados, suscripciones y formatos mal anunciados pueden impedir la detección. La representación nativa de fórmulas sigue teniendo límites; el HTML/PDF original conserva su composición.
+Estos casos verifican mecanismos y formatos, no cobertura universal. Páginas sin metadatos, abstract ni enlaces reconocibles, contenido exclusivamente dinámico, destinos bloqueados, suscripciones y formatos mal anunciados pueden impedir la detección. Las fórmulas, gráficos, referencias y apéndices se consultan en el HTML/PDF original, que conserva su composición.

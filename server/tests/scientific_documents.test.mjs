@@ -22,7 +22,7 @@ const meta = (values) =>
 const paper = (values = {}, body = '') =>
   html(
     meta({ citation_title: 'Compiler research', citation_author: 'Ada Example', ...values }),
-    body,
+    `<div class="abstract">${prose}</div>${body}`,
   );
 const url = 'https://journal.example/papers/one';
 
@@ -150,32 +150,34 @@ test('News retains its body while related DOI and PDF documents are returned sep
   assert.equal(body.paper, undefined);
 });
 
-test('Own scholarly document prefers advertised full HTML; mismatching DOI falls back to its record', async () => {
-  for (const wrong of [false, true]) {
-    const extractor = new ArticleExtractor({
-      robots: { allowed: async () => {} },
-      get: async (u) => ({
+test('Scientific documents use the published abstract and never fetch their full text', async () => {
+  const fetched = [];
+  const extractor = new ArticleExtractor({
+    robots: { allowed: async () => {} },
+    get: async (u) => {
+      fetched.push(u);
+      return {
         url: u,
         type: 'text/html',
-        body:
-          u === url
-            ? paper({
-                citation_doi: '10.1234/one',
-                citation_pdf_url: '/paper.pdf',
-                citation_fulltext_html_url: '/full',
-              })
-            : paper(
-                { citation_doi: wrong ? '10.1234/other' : '10.1234/one' },
-                '<h2>Full evaluation section</h2>',
-              ),
-      }),
-    });
-    const result = await extractor.extract(url);
-    assert.equal(result.contentScope, wrong ? 'paper_record' : 'paper');
-    assert.equal(result.coverage, wrong ? 'partial' : 'extracted');
-    assert.equal(result.text.includes('Full evaluation section'), !wrong);
-    if (wrong) assert.equal(result.paperHtmlError, 'paper_identity_mismatch');
-  }
+        body: paper(
+          {
+            citation_doi: '10.1234/one',
+            citation_pdf_url: '/paper.pdf',
+            citation_fulltext_html_url: '/full',
+          },
+          '<h2>Unneeded full evaluation</h2><table><tr><td>formula garbage</td></tr></table>',
+        ),
+      };
+    },
+  });
+  const result = await extractor.extract(url);
+  assert.deepEqual(fetched, [url]);
+  assert.equal(result.contentScope, 'paper_abstract');
+  assert.equal(result.text, prose.trim());
+  assert.equal(result.text.includes('formula garbage'), false);
+  assert.deepEqual(result.blocks, []);
+  assert.equal(result.paper.htmlUrl, 'https://journal.example/full');
+  assert.equal(result.paper.pdfUrl, 'https://journal.example/paper.pdf');
 });
 
 test('Private URLs, scripts, unrelated citations and failed publishers cannot replace news', async () => {

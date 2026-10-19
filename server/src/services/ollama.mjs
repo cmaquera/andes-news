@@ -94,7 +94,7 @@ export class OllamaModel {
       )
     ).notes;
   }
-  async summarize(title, text) {
+  async summarize(title, text, { scientific = false } = {}) {
     const parts = splitText(text),
       notes = [];
     // Every part is processed. No prefix-only summarization or silent length cap.
@@ -110,7 +110,9 @@ export class OllamaModel {
         throw Error('summary_reduction_not_converging');
     }
     const result = await this.json(
-      'A partir de las notas de todas las partes, redacta un abstracto en español de hasta 160 palabras: qué presenta el autor y por qué importa. Atribuye los resultados al autor; incluye limitaciones solo si están expresamente descritas. No inventes conclusiones sobre fiabilidad, ausencia de datos o garantías. Si la noticia es breve, haz un abstracto proporcional, sin rellenar. Traduce el titular si hace falta. keyPoints debe contener hasta 5 hechos relevantes. Mantén nombres y términos técnicos.',
+      scientific
+        ? 'Las notas proceden únicamente del resumen publicado por los autores de un documento científico, no del paper completo. Redacta en español una explicación clara de hasta 160 palabras para entender de qué trata: objetivo, enfoque o método, aportación y resultados que los autores afirman. Incluye límites solo si constan explícitamente; no añadas detalles de secciones, apéndices o referencias no leídas. Atribuye las afirmaciones a los autores. Traduce el titular al español. keyPoints debe contener hasta 5 puntos relevantes en español. Conserva nombres y términos técnicos cuando corresponda.'
+        : 'A partir de las notas de todas las partes, redacta un abstracto en español de hasta 160 palabras: qué presenta el autor y por qué importa. Atribuye los resultados al autor; incluye limitaciones solo si están expresamente descritas. No inventes conclusiones sobre fiabilidad, ausencia de datos o garantías. Si la noticia es breve, haz un abstracto proporcional, sin rellenar. Traduce el titular si hace falta. keyPoints debe contener hasta 5 hechos relevantes. Mantén nombres y términos técnicos.',
       { title, notes: reduced },
       {
         titleEs: { type: 'string' },
@@ -122,7 +124,7 @@ export class OllamaModel {
     return {
       ...result,
       summaryParts: parts.length,
-      summaryBasis: 'article',
+      summaryBasis: scientific ? 'paper_abstract' : 'article',
       summaryModel: this.model,
     };
   }

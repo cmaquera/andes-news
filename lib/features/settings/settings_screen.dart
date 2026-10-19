@@ -164,7 +164,7 @@ class _SettingsViewState extends ConsumerState<SettingsScreen> {
         const Divider(),
         const SizedBox(height: 12),
         const Text(
-          'Andes · Versión 0.6.2',
+          'Andes · Versión 0.6.3',
           style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
         ),
         const SizedBox(height: 8),

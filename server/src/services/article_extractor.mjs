@@ -3,12 +3,8 @@ import { Readability } from '@mozilla/readability';
 import { SourceError, publicGet, RobotsPolicy } from './public_http.mjs';
 import { publicUrl } from './public_http.mjs';
 import { randomUUID } from 'node:crypto';
-import { arxivIdentity, arxivFormats } from './arxiv.mjs';
-import {
-  resolveScientificReferences,
-  scientificDocuments,
-  nativeReferencePage,
-} from './scientific_documents.mjs';
+import { arxivIdentity } from './arxiv.mjs';
+import { resolveScientificReferences, nativeReferencePage } from './scientific_documents.mjs';
 
 const unwanted =
   'script,style,iframe,form,button,input,nav,footer,aside,noscript,svg,[role="dialog"],[aria-modal="true"],.advertisement,.ad-container,.adsbygoogle,.newsletter-signup,.related-articles,.related-posts,.article-related,[id*="cookie"],[class*="cookie"],[id*="consent"],[class*="consent"]';
@@ -331,98 +327,31 @@ export class ArticleExtractor {
     if (!/html|xhtml/i.test(page.type)) throw new SourceError('unsupported_content');
     // Recheck the final destination too: a publisher redirect can change origins.
     await this.robots.allowed(page.url);
-    const formats = arxivFormats(page.body, page.url);
-    if (formats) {
-      const paper = {
-        ...formats.paper,
-        sourceUrl: page.url,
-        provider: 'arXiv',
-        relation: 'document',
-      };
-      const base = { paper, papers: [paper], author: formats.author, extractionVersion: 4 };
-      if (formats.paper.htmlUrl) {
-        try {
-          await this.robots.allowed(formats.paper.htmlUrl);
-          const full = await this.get(formats.paper.htmlUrl);
-          await this.robots.allowed(full.url);
-          if (
-            !/html|xhtml/i.test(full.type) ||
-            arxivIdentity(full.url)?.id !== arxivIdentity(formats.paper.htmlUrl).id ||
-            !new URL(full.url).pathname.startsWith('/html/')
-          )
-            throw new SourceError('unsupported_content');
-          const extracted = extractHtml(full.body, full.url);
-          return {
-            ...extracted,
-            ...base,
-            author: formats.author || extracted.author,
-            resolvedUrl: full.url,
-            extractionMethod: 'arxiv-html',
-            contentScope: 'paper',
-          };
-        } catch (error) {
-          // An advertised HTML format can still fail or be denied by robots.
-          base.paperHtmlError = error.code ?? 'html_unavailable';
-        }
-      }
-      const extracted = extractHtml(page.body, page.url);
-      return {
-        ...extracted,
-        ...base,
-        author: formats.author || extracted.author,
-        resolvedUrl: page.url,
-        coverage: 'partial',
-        contentScope: 'arxiv_abstract',
-        extractionMethod: 'arxiv-abstract',
-      };
-    }
     const scientific = await resolveScientificReferences(page, this);
-    let bodyPage = page,
-      htmlError;
-    const own = scientific.paper;
-    if (own?.htmlUrl && own.htmlUrl !== page.url) {
-      try {
-        await this.robots.allowed(own.htmlUrl);
-        const full = await this.get(own.htmlUrl);
-        await this.robots.allowed(full.url);
-        if (!/html|xhtml/i.test(full.type)) throw new SourceError('unsupported_content');
-        const metadata = scientificDocuments(full.body, full.url).paper;
-        if (own.doi && metadata?.doi && own.doi.toLowerCase() !== metadata.doi.toLowerCase())
-          throw new SourceError('paper_identity_mismatch');
-        extractHtml(full.body, full.url); // A login/empty page must not replace the record.
-        bodyPage = full;
-      } catch (error) {
-        htmlError = error.code ?? 'html_unavailable';
-      }
-    }
-    let extracted;
-    try {
-      extracted = extractHtml(bodyPage.body, bodyPage.url);
-    } catch (error) {
-      if (!own || error.code !== 'insufficient_article') throw error;
-      extracted = {
+    if (scientific.paper) {
+      const text = scientific.abstract ?? '';
+      return {
         blocks: [],
-        text: '',
-        wordCount: 0,
-        coverage: 'unavailable',
+        text,
+        wordCount: text ? text.split(/\s+/).length : 0,
+        author: scientific.author,
+        paper: scientific.paper,
+        papers: scientific.papers,
+        coverage: 'abstract',
+        contentScope: 'paper_abstract',
+        summaryScope: 'paper_abstract',
+        readingMode: 'scientific_links',
+        extractionMethod: 'scientific-author-abstract',
+        extractionVersion: 5,
+        resolvedUrl: page.url,
         fetchedAt: new Date().toISOString(),
       };
     }
-    const fullPaper = own && own.htmlUrl && !htmlError;
     return {
-      ...extracted,
-      resolvedUrl: bodyPage.url,
-      extractionVersion: 4,
+      ...extractHtml(page.body, page.url),
+      resolvedUrl: page.url,
+      extractionVersion: 5,
       papers: scientific.papers,
-      ...(own
-        ? {
-            paper: own,
-            author: scientific.author || extracted.author,
-            contentScope: fullPaper ? 'paper' : 'paper_record',
-            coverage: fullPaper ? extracted.coverage : 'partial',
-            paperHtmlError: htmlError,
-          }
-        : {}),
       paperDiscoveryFailures: scientific.failures,
     };
   }

@@ -199,6 +199,11 @@ void main() {
         region: 'Global',
         topic: 'IA',
         contentScope: 'arxiv_abstract',
+        abstract: 'Los autores presentan un método de razonamiento híbrido.',
+        content: [ContentBlock('paragraph', 'Broken formula in English')],
+        translatedContent: [
+          ContentBlock('paragraph', 'Fórmula mal reconstruida'),
+        ],
         paper: {
           'id': '2610.18861',
           'pdfUrl': 'https://arxiv.org/pdf/2610.18861',
@@ -221,7 +226,12 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Ver HTML'), findsOneWidget);
       expect(find.text('Ver PDF'), findsOneWidget);
-      expect(find.textContaining('no el documento completo'), findsOneWidget);
+      expect(find.textContaining('fórmulas, figuras, tablas'), findsOneWidget);
+      expect(find.text('Resumen en español'), findsOneWidget);
+      expect(find.text('Artículo limpio'), findsNothing);
+      expect(find.text('Leer dentro de Andes'), findsNothing);
+      expect(find.text('Broken formula in English'), findsNothing);
+      expect(find.text('Fórmula mal reconstruida'), findsNothing);
       expect(tester.takeException(), isNull);
     },
   );

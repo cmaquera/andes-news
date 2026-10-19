@@ -94,7 +94,7 @@ class TableCellData {
 class Article {
   final Map<String, String> paper;
   final List<Map<String, String>> papers;
-  final String contentScope, summaryScope, documentDiscovery;
+  final String contentScope, summaryScope, documentDiscovery, readingMode;
   final String sourceLabel, contentKind, editorialStatus;
   final double? editorialScore;
   final List<String> selectionReasons;
@@ -128,6 +128,7 @@ class Article {
     this.contentScope = '',
     this.summaryScope = '',
     this.documentDiscovery = '',
+    this.readingMode = '',
     Map<String, String> paper = const {},
     List<Map<String, String>> papers = const [],
     this.sourceLabel = '',
@@ -166,6 +167,18 @@ class Article {
       ? sourceLabel
       : sources.where((s) => s.id == sourceId).firstOrNull?.name ?? sourceId;
   bool get isNative => contentKind != 'article';
+  bool get isScientificDocument =>
+      !isNative &&
+      (readingMode == 'scientific_links' ||
+          [
+            'paper',
+            'paper_record',
+            'paper_pdf_only',
+            'paper_abstract',
+            'arxiv_abstract',
+          ].contains(contentScope) ||
+          (paper.isNotEmpty && paper['relation'] != 'reference') ||
+          papers.any((p) => p['relation'] == 'document'));
   List<Map<String, String>> get scientificPapers => papers.isNotEmpty
       ? papers
       : paper.isEmpty
@@ -190,6 +203,7 @@ class Article {
     'contentScope': contentScope,
     'summaryScope': summaryScope,
     'documentDiscovery': documentDiscovery,
+    'readingMode': readingMode,
     'imageUrl': imageUrl,
     'published': published?.toIso8601String(),
     'score': score,
@@ -232,6 +246,7 @@ class Article {
     contentScope: j['contentScope'] ?? '',
     summaryScope: j['summaryScope'] ?? '',
     documentDiscovery: j['documentDiscovery'] ?? '',
+    readingMode: j['readingMode'] ?? '',
     imageUrl: j['imageUrl'] ?? '',
     published: DateTime.tryParse(j['published'] ?? ''),
     score: j['score'] ?? 0,

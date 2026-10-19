@@ -2,6 +2,7 @@ import { APP_VERSION } from '../config/env.mjs';
 import { pagination, articleId } from '../schemas/articles.mjs';
 import { SOURCE_TYPES } from './ingestion.mjs';
 import { sourceCatalog } from '../services/source_identity.mjs';
+import { readerArticle } from '../services/reading_policy.mjs';
 
 export async function articleRoutes(app, { store, collector, editorial = false, documents }) {
   app.get('/', { config: { public: true } }, async () => ({
@@ -45,10 +46,10 @@ export async function articleRoutes(app, { store, collector, editorial = false, 
     const { contentText, ...detail } = article;
     const discovered = documents?.read(article);
     return {
-      article: {
+      article: readerArticle({
         ...detail,
         ...(discovered ? { papers: discovered.papers, documentDiscovery: discovered.status } : {}),
-      },
+      }),
     };
   });
   app.all('/summary', async (_request, reply) =>

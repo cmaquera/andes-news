@@ -15,7 +15,7 @@ const prose =
     15,
   );
 const record = (links = '') =>
-  `<html><head><title>Software agents</title><meta name="citation_author" content="Ada Example"></head><body><article><h1>Software agents</h1><p>${prose}</p>${links}</article></body></html>`;
+  `<html><head><title>Software agents</title><meta name="citation_author" content="Ada Example"></head><body><article><h1>Software agents</h1><div class="abstract">${prose}</div>${links}</article></body></html>`;
 
 test('Horizon-managed publishers are not fetched a second time by the legacy collector', async (t) => {
   const store = new Store(':memory:');
@@ -120,7 +120,7 @@ test('arXiv abstract, HTML and PDF share a document; distinct versions remain se
   );
 });
 
-test('arXiv uses advertised full HTML and retains links, authors and tables', async () => {
+test('arXiv keeps original formats and uses only the author abstract without fetching full HTML', async () => {
   const urls = [],
     checks = [];
   const htmlUrl = 'https://arxiv.org/html/2610.18861v1';
@@ -141,17 +141,19 @@ test('arXiv uses advertised full HTML and retains links, authors and tables', as
     },
   });
   const article = await extractor.extract('https://arxiv.org/pdf/2610.18861');
-  assert.deepEqual(urls, [abs, htmlUrl]);
-  assert.ok(checks.includes(htmlUrl));
+  assert.deepEqual(urls, [abs]);
+  assert.ok(!checks.includes(htmlUrl));
   assert.equal(article.paper.pdfUrl, 'https://arxiv.org/pdf/2610.18861');
   assert.equal(article.paper.htmlUrl, htmlUrl);
   assert.equal(article.author, 'Ada Example');
-  assert.equal(article.contentScope, 'paper');
-  assert.equal(article.resolvedUrl, htmlUrl);
-  assert.ok(article.blocks.some((b) => b.type === 'table'));
+  assert.equal(article.contentScope, 'paper_abstract');
+  assert.equal(article.resolvedUrl, abs);
+  assert.deepEqual(article.blocks, []);
+  assert.equal(article.text, prose.trim());
+  assert.equal(article.readingMode, 'scientific_links');
 });
 
-test('Missing or failed arXiv HTML keeps PDF and honestly marks abstract-only coverage', async () => {
+test('arXiv original format availability does not trigger full-document extraction', async () => {
   for (const html of [false, true]) {
     const extractor = new ArticleExtractor({
       robots: { allowed: async () => {} },
@@ -167,11 +169,11 @@ test('Missing or failed arXiv HTML keeps PDF and honestly marks abstract-only co
       },
     });
     const result = await extractor.extract(abs);
-    assert.equal(result.coverage, 'partial');
-    assert.equal(result.contentScope, 'arxiv_abstract');
+    assert.equal(result.coverage, 'abstract');
+    assert.equal(result.contentScope, 'paper_abstract');
     assert.ok(result.paper.pdfUrl);
     assert.equal(Boolean(result.paper.htmlUrl), html);
-    if (html) assert.equal(result.paperHtmlError, 'http_403');
+    assert.equal(result.paperHtmlError, undefined);
   }
 });
 

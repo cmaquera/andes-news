@@ -122,7 +122,11 @@ class _ReaderState extends ConsumerState<ArticleScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          article.isNative ? 'Publicación original' : 'Lectura limpia',
+          article.isScientificDocument
+              ? 'Documento científico'
+              : article.isNative
+              ? 'Publicación original'
+              : 'Lectura limpia',
           style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w600),
         ),
         actions: [
@@ -183,7 +187,7 @@ class _ReaderState extends ConsumerState<ArticleScreen> {
                       article.author,
                       style: const TextStyle(color: _muted, fontSize: 11),
                     ),
-                  if (article.wordCount > 0)
+                  if (article.wordCount > 0 && !article.isScientificDocument)
                     Text(
                       '${article.wordCount} palabras recuperadas',
                       style: const TextStyle(color: _muted, fontSize: 11),
@@ -286,37 +290,11 @@ class _ReaderState extends ConsumerState<ArticleScreen> {
                     ],
                   ),
                 ],
-                if (article.contentScope == 'paper_record' ||
-                    article.contentScope == 'paper_pdf_only')
+                if (article.isScientificDocument)
                   const Padding(
                     padding: EdgeInsets.symmetric(vertical: 12),
                     child: Text(
-                      'Esta lectura puede limitarse a la ficha o al resumen. Consulta los formatos originales disponibles para leer el documento.',
-                      style: TextStyle(
-                        color: _muted,
-                        fontSize: 12,
-                        height: 1.5,
-                      ),
-                    ),
-                  ),
-                if (article.contentScope == 'arxiv_abstract')
-                  const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 12),
-                    child: Text(
-                      'La lectura recuperada contiene la ficha y el resumen de arXiv, no el documento completo. Consulta los formatos originales disponibles.',
-                      style: TextStyle(
-                        color: _muted,
-                        fontSize: 12,
-                        height: 1.5,
-                      ),
-                    ),
-                  ),
-                if (article.summaryScope == 'arxiv_abstract' &&
-                    article.contentScope != 'arxiv_abstract')
-                  const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 12),
-                    child: Text(
-                      'Este abstracto se preparó con la ficha de arXiv. La lectura original incluye ahora el HTML del documento.',
+                      'Lee aquí el resumen en español. Consulta el HTML o PDF original para ver fórmulas, figuras, tablas, referencias y apéndices.',
                       style: TextStyle(
                         color: _muted,
                         fontSize: 12,
@@ -326,24 +304,30 @@ class _ReaderState extends ConsumerState<ArticleScreen> {
                   ),
                 const SizedBox(height: 12),
               ],
-              SegmentedButton<String>(
-                segments: [
-                  const ButtonSegment(
-                    value: 'abstract',
-                    label: Text('Abstracto'),
-                    icon: Icon(Icons.auto_awesome, size: 17),
-                  ),
-                  ButtonSegment(
-                    value: 'article',
-                    label: Text(
-                      article.isNative ? 'Publicación' : 'Artículo limpio',
+              if (article.isScientificDocument)
+                const Text(
+                  'Resumen en español',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+                )
+              else
+                SegmentedButton<String>(
+                  segments: [
+                    const ButtonSegment(
+                      value: 'abstract',
+                      label: Text('Abstracto'),
+                      icon: Icon(Icons.auto_awesome, size: 17),
                     ),
-                    icon: const Icon(Icons.article_outlined, size: 17),
-                  ),
-                ],
-                selected: {view},
-                onSelectionChanged: (v) => setState(() => view = v.first),
-              ),
+                    ButtonSegment(
+                      value: 'article',
+                      label: Text(
+                        article.isNative ? 'Publicación' : 'Artículo limpio',
+                      ),
+                      icon: const Icon(Icons.article_outlined, size: 17),
+                    ),
+                  ],
+                  selected: {view},
+                  onSelectionChanged: (v) => setState(() => view = v.first),
+                ),
               if (loading)
                 const Padding(
                   padding: EdgeInsets.only(top: 16),
@@ -361,7 +345,7 @@ class _ReaderState extends ConsumerState<ArticleScreen> {
                     ),
                   ),
                 ),
-              if (partial)
+              if (partial && !article.isScientificDocument)
                 const Padding(
                   padding: EdgeInsets.only(top: 14),
                   child: Text(
@@ -374,7 +358,7 @@ class _ReaderState extends ConsumerState<ArticleScreen> {
                   ),
                 ),
               const SizedBox(height: 22),
-              if (view == 'abstract') ...[
+              if (article.isScientificDocument || view == 'abstract') ...[
                 Container(
                   padding: const EdgeInsets.all(18),
                   decoration: BoxDecoration(
@@ -384,7 +368,9 @@ class _ReaderState extends ConsumerState<ArticleScreen> {
                   child: SelectableText(
                     article.abstract.isEmpty
                         ? (article.status == 'unavailable'
-                              ? 'No se pudo recuperar y procesar este artículo. No generamos un resumen a partir del titular o el RSS.'
+                              ? article.isScientificDocument
+                                    ? 'No se pudo recuperar el resumen de los autores para preparar el abstracto. Puedes consultar el documento original.'
+                                    : 'No se pudo recuperar y procesar este artículo. No generamos un resumen a partir del titular o el RSS.'
                               : 'El servidor está recuperando el artículo y preparando su abstracto. Actualiza más tarde.')
                         : article.abstract,
                     style: TextStyle(fontSize: fontSize, height: 1.7),
@@ -411,8 +397,13 @@ class _ReaderState extends ConsumerState<ArticleScreen> {
                 Text(
                   article.abstract.isEmpty
                       ? 'Procesamiento automático en el servidor.'
-                      : article.summaryScope == 'arxiv_abstract'
-                      ? 'Abstracto preparado a partir de la ficha de arXiv. Consulta el documento original para verificar los detalles.'
+                      : article.isScientificDocument
+                      ? [
+                              'paper_abstract',
+                              'arxiv_abstract',
+                            ].contains(article.summaryScope)
+                            ? 'Resumen en español basado en el resumen publicado por los autores. Consulta el documento original para verificar los detalles.'
+                            : 'Resumen en español para orientarte. Consulta el documento original para verificar los detalles.'
                       : 'Abstracto generado por IA a partir de todas las partes del cuerpo recuperado. Consulta la lectura para verificar los detalles.',
                   style: const TextStyle(
                     color: _muted,
@@ -420,12 +411,14 @@ class _ReaderState extends ConsumerState<ArticleScreen> {
                     height: 1.5,
                   ),
                 ),
-                const SizedBox(height: 20),
-                FilledButton.icon(
-                  onPressed: () => setState(() => view = 'article'),
-                  icon: const Icon(Icons.menu_book_outlined, size: 18),
-                  label: const Text('Leer dentro de Andes'),
-                ),
+                if (!article.isScientificDocument) ...[
+                  const SizedBox(height: 20),
+                  FilledButton.icon(
+                    onPressed: () => setState(() => view = 'article'),
+                    icon: const Icon(Icons.menu_book_outlined, size: 18),
+                    label: const Text('Leer dentro de Andes'),
+                  ),
+                ],
               ] else ...[
                 if (article.translatedContent.isNotEmpty) ...[
                   SegmentedButton<bool>(
