@@ -187,11 +187,6 @@ class NewsRow extends StatelessWidget {
                     : stamp(a.published!),
                 style: const TextStyle(fontSize: 10, color: muted),
               ),
-              if (a.score > 0)
-                Text(
-                  '↑ ${a.score} · ${a.comments} comentarios',
-                  style: const TextStyle(fontSize: 10, color: muted),
-                ),
               if (a.abstract.isNotEmpty)
                 const Text(
                   'Resumen en español',
