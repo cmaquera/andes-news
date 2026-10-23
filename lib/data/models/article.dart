@@ -173,7 +173,9 @@ class Article {
     translatedContent: (j['translatedContent'] as List? ?? [])
         .map((b) => ContentBlock.fromJson(b))
         .toList(),
-    keyPoints: (j['keyPoints'] as List? ?? []).map((e) => e.toString()).toList(),
+    keyPoints: (j['keyPoints'] as List? ?? [])
+        .map((e) => e.toString())
+        .toList(),
   );
 }
 
