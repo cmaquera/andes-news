@@ -437,8 +437,8 @@ class _FeedViewState extends ConsumerState<FeedView> {
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
       sectionTitle(
-        'Fuentes',
-        action: sourceFilter.isEmpty ? 'Todas' : 'Quitar filtro',
+        'Canales',
+        action: sourceFilter.isEmpty ? 'Todos' : 'Quitar filtro',
         onTap: () => setState(() => sourceFilter = ''),
       ),
       SizedBox(
@@ -447,7 +447,7 @@ class _FeedViewState extends ConsumerState<FeedView> {
           padding: const EdgeInsets.symmetric(horizontal: 20),
           scrollDirection: Axis.horizontal,
           itemCount: feed.sources.length,
-          separatorBuilder: (_, i) => const SizedBox(width: 16),
+          separatorBuilder: (_, i) => const SizedBox(width: 14),
           itemBuilder: (_, i) {
             final s = feed.sources[i];
             return InkWell(
@@ -455,17 +455,17 @@ class _FeedViewState extends ConsumerState<FeedView> {
                 () => sourceFilter = sourceFilter == s.id ? '' : s.id,
               ),
               child: SizedBox(
-                width: 82,
+                width: 90,
                 child: Column(
                   children: [
                     SourceBadge(s.id, size: 42),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 6),
                     Text(
                       s.name.split(' ·').first,
                       maxLines: 2,
                       textAlign: TextAlign.center,
                       style: TextStyle(
-                        fontSize: 11,
+                        fontSize: 10,
                         color: sourceFilter == s.id ? blue : ink,
                       ),
                     ),

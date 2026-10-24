@@ -122,7 +122,7 @@ class _SettingsViewState extends ConsumerState<SettingsScreen> {
         ),
         const SizedBox(height: 28),
         const Text(
-          'TUS FUENTES',
+          'CANALES',
           style: TextStyle(
             fontSize: 11,
             fontWeight: FontWeight.w700,
@@ -140,8 +140,12 @@ class _SettingsViewState extends ConsumerState<SettingsScreen> {
               style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
             ),
             subtitle: Text(
-              '${s.region}${errors.containsKey(s.id) ? ' · Sin actualizar' : ''}',
+              s.description.isNotEmpty
+                  ? s.description
+                  : '${s.region}${errors.containsKey(s.id) ? ' · Sin actualizar' : ''}',
               style: const TextStyle(color: muted, fontSize: 11),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
             ),
             value: state.value.isSourceEnabled(s.id),
             onChanged: loading || savingConfig
@@ -154,16 +158,11 @@ class _SettingsViewState extends ConsumerState<SettingsScreen> {
                   },
           ),
         ),
-        const SizedBox(height: 20),
-        const Text(
-          'La región indica el origen de la fuente. Deslizar el feed consulta los resultados del servidor; la recopilación se ejecuta cada dos horas aunque la app esté cerrada.',
-          style: TextStyle(fontSize: 12, color: muted, height: 1.5),
-        ),
         const SizedBox(height: 18),
         const Divider(),
         const SizedBox(height: 12),
         const Text(
-          'Andes · Versión 0.6.4',
+          'Andes · Versión 0.6.5',
           style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
         ),
         const SizedBox(height: 8),

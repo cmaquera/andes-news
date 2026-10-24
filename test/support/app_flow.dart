@@ -130,7 +130,10 @@ void registerAppFlow() {
         await const FlutterSecureStorage().read(key: 'andesApiToken'),
         'y' * 32,
       );
-      final hackerNews = find.widgetWithText(SwitchListTile, 'Hacker News');
+      final hackerNews = find.widgetWithText(
+        SwitchListTile,
+        'Hacker News (1 fuente)',
+      );
       await tester.scrollUntilVisible(
         hackerNews,
         200,

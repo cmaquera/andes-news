@@ -1,9 +1,17 @@
 const defaultAndesEndpoint = 'https://andes-news.cmaquera.com';
 
 class NewsSource {
-  final String id, name, region;
+  final String id, name, region, description;
+  final int count;
   final List<String> aliases;
-  const NewsSource(this.id, this.name, this.region, [this.aliases = const []]);
+  const NewsSource(
+    this.id,
+    this.name,
+    this.region, [
+    this.aliases = const [],
+    this.description = '',
+    this.count = 1,
+  ]);
 
   factory NewsSource.fromJson(Map<String, dynamic> j) {
     final rawAliases = j['aliases'] as List? ?? [];
@@ -12,6 +20,8 @@ class NewsSource {
       j['name']?.toString() ?? '',
       j['region']?.toString() ?? 'Global',
       rawAliases.map((e) => e.toString()).toList(),
+      j['description']?.toString() ?? '',
+      j['count'] is num ? (j['count'] as num).toInt() : 1,
     );
   }
 
@@ -20,16 +30,60 @@ class NewsSource {
     'name': name,
     'region': region,
     'aliases': aliases,
+    'description': description,
+    'count': count,
   };
 }
 
 const defaultSources = [
-  NewsSource('hackernews', 'Hacker News', 'Global', ['hn']),
-  NewsSource('reddit', 'Reddit r/LocalLLaMA', 'Global'),
-  NewsSource('github', 'GitHub Trending AI & Software', 'Global'),
-  NewsSource('rss', 'The Verge - AI Tech', 'Global'),
-  NewsSource('x', 'Andrej Karpathy (X/Twitter)', 'Global'),
-  NewsSource('telegram', 'Telegram Kubernetes News', 'Global'),
+  NewsSource(
+    'hackernews',
+    'Hacker News (1 fuente)',
+    'Global',
+    ['hn'],
+    'Portada y debates destacados de tecnología',
+    1,
+  ),
+  NewsSource(
+    'reddit',
+    'Comunidades Reddit (3 fuentes)',
+    'Global',
+    [],
+    'r/LocalLLaMA, r/programming, r/MachineLearning',
+    3,
+  ),
+  NewsSource(
+    'github',
+    'GitHub Trending & Repos (3 fuentes)',
+    'Global',
+    [],
+    'Trending AI & Software, LLM Repositories, Cloud Native',
+    3,
+  ),
+  NewsSource(
+    'rss',
+    'Blogs y Feeds RSS (11 fuentes)',
+    'Global',
+    [],
+    'Hugging Face, arXiv, The Verge, Mercado Libre, InfoQ y más',
+    11,
+  ),
+  NewsSource(
+    'x',
+    'X (Twitter) (2 fuentes)',
+    'Global',
+    [],
+    'Andrej Karpathy (@karpathy), Miguel Ángel Durán (@midudev)',
+    2,
+  ),
+  NewsSource(
+    'telegram',
+    'Canales de Telegram (2 fuentes)',
+    'Global',
+    [],
+    'Telegram Kubernetes News, The Hacker News',
+    2,
+  ),
 ];
 
 // Deprecated compatibility alias for legacy tests:
