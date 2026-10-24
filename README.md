@@ -1,116 +1,160 @@
-# Andes News
+# Andes News (Cliente Android)
 
-Android en Flutter y backend de noticias de desarrollo de software e IA para Perú y Latinoamérica. Backend 0.4.3 con Fastify 5 y APK 0.5: el servidor recopila fuentes cada dos horas, recupera el cuerpo de los artículos, genera abstractos en español y conserva una lectura limpia con texto original, imágenes, tablas y traducción cuando hace falta.
+Aplicación móvil nativa en Flutter (versión 0.6.5, Build 11) para Android, diseñada para lectura técnica de noticias, ingeniería de software, arquitectura de sistemas e inteligencia artificial para Perú y Latinoamérica.
 
-## Arquitectura
+El cliente consume los artículos procesados y enriquecidos desde el backend [news-api](https://andes-news.cmaquera.com), el cual recopila fuentes especializadas, extrae el contenido sin distracciones ni publicidad, ejecuta pipelines de inferencia local con Ollama / Qwen3 y traduce titulares y contenido técnico al español mediante NLLB-200.
+
+---
+
+## Arquitectura del Sistema
 
 ```mermaid
 flowchart TD
-  RSS[RSS y APIs de seis fuentes] --> COL[Recopilador cada dos horas]
-  COL --> EXT[Descarga pública y extracción del cuerpo]
-  EXT --> DB[(SQLite persistente)]
-  DB --> Q[Cola: una noticia a la vez]
-  Q --> LLM[Qwen3 de 4B en Ollama privado]
-  LLM --> DB
-  DB --> API[API de Andes con token]
-  API --> APP[Android: abstracto y lector nativo sin páginas web]
+    subgraph Backend ["news-api en makara (FastAPI)"]
+        ING["Ingesta: 22 fuentes RSS/APIs"] --> EXT["Extractor Readability & arXiv"]
+        EXT --> LLM["Ollama Qwen3 4B (Abstractos) & NLLB-200 (Traducción)"]
+        LLM --> DB[("PostgreSQL")]
+        DB --> API["API REST (FastAPI)"]
+    end
+
+    subgraph Mobile ["Andes News 0.6.5 (Flutter Android)"]
+        API -- "HTTPS Bearer Token" --> NET["NewsService (Cliente HTTPS)"]
+        NET --> REPO["NewsRepository & SettingsRepository"]
+        REPO --> CONTROLLERS["Riverpod Controllers (Feed, Reader, Bookmarks, Settings)"]
+        CONTROLLERS --> UI["Vistas: Radar, Descubrir, Guardados, Canales (Ajustes)"]
+        REPO --> CACHE[("Caché Local: SharedPreferences + SecureStorage")]
+    end
 ```
 
-La app no consulta las fuentes ni ejecuta inferencias. Obtiene noticias y artículos preparados mediante la API. Cambiar los filtros o deslizar el feed consulta el servidor; no inicia otra recopilación.
+La app móvil no realiza scraping directo ni ejecuta modelos de lenguaje pesados en el dispositivo del usuario. Todo el procesamiento editorial y de inteligencia se resuelve previamente en el servidor. La aplicación se encarga de la visualización fluida, la navegación estructurada, la lectura sin conexión y el filtrado local no destructivo por canales.
 
-## Procesamiento
+---
 
-- Recopila Gestión Tecnología, Xataka México, Genbeta, GitHub Changelog, DEV en español y Hacker News. Inspecciona hasta 80 entradas RSS y selecciona hasta 20 noticias pertinentes por fuente en cada ciclo; Hacker News inspecciona hasta 40 historias.
-- Filtra antes de gastar GPU: acepta ingeniería de software, herramientas para desarrolladores y avances/métodos/aplicaciones concretas de IA. Excluye lanzamientos de consumo, ofertas, entretenimiento y noticias genéricas; mencionar IA no basta. Un celular puede pasar si su titular/extracto aporta SDK, inferencia o herramientas para desarrolladores, y cumple el enfoque técnico.
-- Revisa nuevamente la pertinencia con el cuerpo recuperado. El criterio es una política explícita por términos y contexto, no un clasificador de IA; puede omitir titulares ambiguos o aceptar algún falso positivo. Se conserva el motivo de selección en `relevance`.
-- Deduplica por URL y conserva procedencia. Dentro de cada día da prioridad a noticias técnicas con referencias a Perú/Latinoamérica en su contenido; esas referencias no garantizan que describan una implantación regional real. Mantiene también avances globales relevantes.
-- Descarga el HTML público, respeta `robots.txt` y extrae el cuerpo con Mozilla Readability. Elimina scripts, publicidad identificable, navegación y diálogos de cookies. No ejecuta JavaScript ni carga páginas dentro del lector.
-- Para DEV obtiene el cuerpo publicado desde su API pública de artículos, en lugar de utilizar la descripción breve del listado.
-- Guarda párrafos, títulos, listas, citas, código e imágenes del cuerpo con sus leyendas. Las tablas conservan encabezados y celdas combinadas y se muestran como cuadros con desplazamiento horizontal.
-- Conserva archivos de video directos recuperables (MP4, WebM o streams compatibles con Android), con reproducción nativa bajo demanda. Los embeds de YouTube y Vimeo se convierten en enlaces a su reproductor externo; no se descargan ni se eliminan anuncios del proveedor. PDF, DRM, reproductores personalizados y contenido cargado exclusivamente mediante JavaScript pueden no recuperarse.
-- Procesa **todas** las partes del texto recuperado con contexto de 2048 tokens. Combina notas de forma jerárquica y genera un abstracto de hasta 160 palabras y puntos clave. No usa el extracto del RSS para generar el abstracto.
-- Traduce el titular y el cuerpo cuando el idioma detectado no es español. Traduce por bloques y conserva intactos los bloques de código. La app permite alternar español/original.
-- Guarda resultados y caché de las inferencias en SQLite, en el volumen existente `andes-cache`. Conserva artículos y caché durante 60 días; recupera trabajos interrumpidos después de reiniciar.
-- Descubrimiento e inferencia usan bucles separados: la consulta cada dos horas sigue funcionando aunque haya una cola de artículos pendientes. Las noticias se preparan progresivamente; no hay garantía de que toda una carga termine antes del siguiente ciclo.
+## Características Principales
 
-`extracted` indica cuerpo recuperado por el extractor, no una garantía editorial de que la página entregó cada elemento del artículo. `partial` señala restricciones detectadas de la fuente. Los errores de acceso, robots, contenido insuficiente o formatos no soportados se registran; se reintenta hasta tres veces y nunca se inventa un artículo completo a partir del titular. Los abstractos y traducciones siguen siendo resultados de IA y pueden contener errores.
+### 1. Sistema Dinámico de Canales (v0.6.5)
+- El backend agrupa las 22 fuentes activas en canales consolidados expuestos en `GET /sources`:
+  - **Blogs y Feeds RSS**: Fuentes de ingeniería y blogs técnicos oficiales.
+  - **Medios y Portales Tech**: Portales de tecnología y análisis de software.
+  - **Ecosistema Open Source**: Registros de cambios, lanzamientos y repositorios.
+  - **Comunidades de Desarrolladores**: Artículos y tutoriales de comunidades abiertas.
+  - **Plataformas de Discusión**: Agregadores de discusión técnica.
+- **Filtrado no destructivo**: En la pantalla de Configuración (`Ajustes`), el usuario puede activar o desactivar canales completos. La sincronización en segundo plano continúa descargando todas las noticias para mantener la caché intacta; el filtrado opera a nivel de vista en el Radar y Descubrir.
+- **Conteo en tiempo real**: Cada canal muestra dinámicamente la cantidad de fuentes que agrupa (`X fuentes`) y un subtítulo explicativo.
 
-## Android
+### 2. Lector Nativo sin Distracciones
+- **Doble Modo**: Alternancia instantánea entre el **Abstracto** (resumen ejecutivo de hasta 160 palabras con puntos clave generado por IA) y el **Artículo Limpio**.
+- **Traducción Técnica**: Selector para alternar entre el texto en español traducido y el contenido original en inglés, conservando bloques de código intactos.
+- **Elementos Ricos**: Renderizado nativo de párrafos, encabezados, bloques de código monospace, citas destacadas, tablas con desplazamiento horizontal y soporte para imágenes y videos embebidos.
 
-La versión 0.5 organiza Flutter por funcionalidades, con Riverpod, controladores MVVM, repositorios y modelos inmutables. Consulta [la arquitectura y guía de mantenimiento de Android](docs/flutter_architecture.md). La actualización conserva guardados, contenido en caché, fuentes y el token existente; no requiere actualizar el backend 0.4.3 ni cambiar sus credenciales.
+### 3. Modo Offline y Caché Resiliente
+- Almacenamiento seguro del token de acceso (`FlutterSecureStorage`).
+- Almacenamiento local persistente (`SharedPreferences`) para las noticias del feed y artículos guardados.
+- Si se pierde la conexión a internet, la aplicación sirve los artículos almacenados en caché sin interrupciones.
 
-El dominio predeterminado es `https://andes-news.cmaquera.com`. En Ajustes introduce tu token `ANDES_API_TOKEN`; la URL se puede cambiar. El token se almacena con Flutter Secure Storage y no está incluido en el APK.
+### 4. Diseño Cyber-Obsidian Estricto
+- Paleta visual de alto contraste: Fondo principal `#05080f` y tarjetas `#0b1120`.
+- Acentos visuales en cian neón (`#00f5c4`) y esmeralda (`#10b981`).
+- **Cero Emojis**: Todos los indicadores y estados visuales utilizan iconos vectoriales limpios (SVG o `IconData`).
 
-El lector tiene Abstracto y Artículo limpio. El enlace original queda como acción secundaria explícita. Al guardar una noticia, intenta descargar su cuerpo; si no hay conexión o el servidor aún no lo preparó, conserva los datos disponibles. El contenido abierto se guarda en caché para lectura sin conexión.
+---
 
-Imágenes y videos se cargan directamente desde URLs HTTPS de la fuente, sin enviarles el token de Andes. Se necesita conexión para cargarlos; no se guardan sus archivos en la caché persistente de lectura. La fuente puede bloquearlos o caducar la URL: en ese caso se muestra un aviso. La extracción conserva elementos del cuerpo detectado, no una copia exacta de la página.
+## Estructura del Código
 
+El proyecto sigue una arquitectura MVVM modular basada en Riverpod 3 (`NotifierProvider`):
+
+```text
+lib/
+├── main.dart                  # Punto de entrada de la aplicación
+├── app/
+│   ├── andes_app.dart         # Configuración de MaterialApp y ProviderScope
+│   ├── providers.dart         # Inyección de dependencias y repositorios
+│   └── theme.dart             # Paleta Cyber-Obsidian y estilos tipográficos
+├── core/
+│   ├── errors/                # Tipos de errores tipados de API y red
+│   ├── network/               # Cliente HTTP autenticado con Bearer Token
+│   ├── storage/               # Capa de almacenamiento local y caché
+│   └── ui/                    # Widgets reutilizables y botones estilizados
+├── data/
+│   ├── models/                # Modelos de dominio inmutables (Article, Source, etc.)
+│   └── repositories/          # Implementación de repositorios de noticias y ajustes
+└── features/
+    ├── feed/                  # Pantalla de Radar (feed principal) y selector de canales
+    ├── reader/                # Pantalla de lectura limpia, abstracto y visor multimedia
+    ├── bookmarks/             # Pantalla de artículos guardados para lectura offline
+    └── settings/              # Configuración de endpoints y gestión de Canales
+```
+
+Consulta [docs/flutter_architecture.md](docs/flutter_architecture.md) para detalles sobre el flujo de datos, gestión de estados y pruebas.
+
+---
+
+## Configuración y Conexión
+
+Por defecto, la aplicación apunta al entorno de producción:
+- **Endpoint**: `https://andes-news.cmaquera.com`
+- **Autenticación**: `ANDES_API_TOKEN` introducido en la pantalla de Ajustes. El token se guarda cifrado en el llavero seguro del sistema.
+
+### Rutas de la API consumidas por el cliente
+
+- `GET /articles?limit=100&offset=0`: Obtiene el listado de noticias con sus abstractos, relevancia y procedencia.
+- `GET /articles/:id`: Obtiene el cuerpo completo estructurado por bloques (párrafos, títulos, código, tablas, imágenes).
+- `GET /sources`: Retorna los canales configurados en el backend con sus respectivos conteos y descripciones.
+- `GET /status`: Consulta el estado de los ciclos de ingestión y cola de inferencia.
+
+---
+
+## Compilación y Pruebas
+
+### Requisitos
+- Flutter SDK 3.47.4 o superior (canal estable).
+- Dart SDK 3.7.0 o superior.
+- Android SDK con soporte para API 34+.
+
+### Verificación de Calidad
 ```powershell
 flutter pub get
+dart format --output=none --set-exit-if-changed lib test integration_test
 flutter analyze
 flutter test
+```
+
+### Compilación de APK Release
+Para generar el paquete optimizado para dispositivos ARM64:
+
+```powershell
 flutter build apk --release --target-platform android-arm64
 ```
 
-El APK queda en `build/app/outputs/flutter-apk/app-release.apk`. Se firma con la clave de desarrollo para pruebas personales. Antes de distribuir en Play Store hace falta configurar una firma propia.
+El binario resultante se genera en:
+`build/app/outputs/flutter-apk/app-release.apk`
 
-## Backend y despliegue
-
-Sigue [server/DEPLOY.md](server/DEPLOY.md). Dokploy construye el backend Node.js 22 con sus dependencias desde `compose.yaml`. Mantén una sola instancia para compartir la cola y la base de datos con tu GPU.
-
-La API usa Fastify 5, con rutas declaradas y parámetros validados mediante JSON Schema. `server/src/app.mjs` construye Fastify y `server/src/server.mjs` controla arranque y cierre. Las carpetas `config`, `routes`, `schemas`, `plugins`, `services`, `jobs` y `repositories` separan responsabilidades; `server/tests` contiene las pruebas y `server/scripts` las herramientas de diagnóstico. Consulta [la estructura y guía de mantenimiento](server/README.md). Las pruebas usan `fastify.inject()` y conexiones HTTP locales. El registro de solicitudes oculta el encabezado de autorización.
-
-```dotenv
-ANDES_API_TOKEN=TU_TOKEN_ALEATORIO
-ANDES_PORT=8787
-OLLAMA_SERVICE_HOST=host.docker.internal
-OLLAMA_SERVICE_PORT=11434
-```
-
-El contenedor llega al Ollama existente en Ubuntu por la red privada de Docker, no por un dominio público. Usa `qwen3:4b-instruct-2507-q4_K_M`, cuatro hilos de CPU y una inferencia a la vez. No instala ni descarga otro modelo.
-
-Para desarrollo local fuera de Docker configura el token y una ruta de SQLite dentro del proyecto antes de iniciar `npm.cmd start --prefix server` o `node server/src/server.mjs`. Ollama se busca por defecto en `127.0.0.1:11434`.
-
-## API
-
-- `GET /` y `GET /health`: estado básico sin credenciales.
-- `GET /articles?limit=100&offset=0`: metadatos, abstractos preparados, estado de colección y cola.
-- `GET /articles/:id`: cuerpo original y traducción, en bloques de texto.
-- `GET /sources`: fuentes configuradas.
-- `GET /status`: último ciclo, próximo ciclo y trabajos pendientes.
-
-Estas rutas de datos requieren `Authorization: Bearer TOKEN`. `/summary` devuelve 410: la versión anterior resumía extractos y fue sustituida por el procesamiento de artículos en segundo plano. Es necesario actualizar backend y APK juntos.
-
-El backend 0.4.3 reorganizado es compatible con el APK 0.4 ya instalado: redespliega únicamente el backend. La paginación acepta enteros `limit` entre 1 y 200 y `offset` entre 0 y 100000; valores fuera de esos rangos o inválidos devuelven 400. Los IDs inexistentes o inválidos devuelven 404 y los errores internos devuelven un mensaje genérico, sin información de la base de datos.
-
-Para consultar el estado desde Ubuntu, sustituye únicamente `TU_API_KEY` por tu `ANDES_API_TOKEN`:
-
-```bash
-curl --fail-with-body -sS "https://andes-news.cmaquera.com/status" -H "Authorization: Bearer TU_API_KEY"
-```
-
-`collection` contiene el último ciclo y sus errores; `nextCollectionAt` es la próxima ejecución en milisegundos Unix, `counts` indica noticias por estado y `processing` indica si el trabajador está ocupado. La actualización 0.4 vuelve a poner una sola vez en la cola los artículos de texto de 0.3 para recuperar imágenes, tablas y videos. Conserva su lectura anterior y abstracto mientras espera; no elimina la base de datos.
-
-El backend 0.4.1 aplica el enfoque también a las noticias ya guardadas al iniciar: las irrelevantes salen del feed y de la cola con estado `filtered`, conservando su detalle para artículos guardados. `collection.filtered` cuenta candidatos descartados en el ciclo; `counts.filtered` cuenta artículos guardados descartados. El APK 0.4 ya instalado es compatible; basta redesplegar el backend y actualizar el feed.
-
-Las solicitudes a publicaciones se limitan a HTTP/HTTPS público con DNS comprobado y fijado a la conexión. Se rechazan direcciones privadas, redirecciones inseguras, HTML de más de 2 MB y documentos de más de 30000 elementos. Ollama es la única conexión interna intencionada.
-
-## Verificación
+### Instalación Directa por USB (ADB)
+Con el dispositivo conectado y la depuración USB activa:
 
 ```powershell
-npm.cmd ci --prefix server --ignore-scripts
-npm.cmd test --prefix server
-npm.cmd run format:check --prefix server
-flutter analyze
-flutter test
+adb -s <DEVICE_ID> install -r build/app/outputs/flutter-apk/app-release.apk
 ```
 
-Las pruebas cubren extracción limpia, contenido parcial, robots, bloqueo de direcciones privadas, procesamiento de todas las partes, persistencia/reanudación, recopilación cada dos horas durante inferencia, exclusión de trabajadores concurrentes, autenticación y lector original/traducido en pantalla pequeña.
+---
 
-La extracción real se comprobó con un artículo de Genbeta de 509 palabras y tres imágenes y un changelog de GitHub de 428 palabras. Las pruebas cubren además conservación/traducción de tablas con celdas combinadas, metadatos de videos y renderizado de tablas en pantalla pequeña. Las pruebas automáticas de inferencia usan respuestas simuladas; el procesamiento completo con tu GPU, la reproducción de videos en un teléfono físico y el nuevo despliegue en Dokploy deben verificarse al desplegar. No hay motor Docker activo en el entorno de desarrollo para construir localmente la imagen; el Compose sí se validó.
+## Historial de Versiones
 
-## Diseño y atribución
+- **0.6.5 (Build 11)**:
+  - Sistema de Canales: Consolidación visual de las 22 fuentes activas del backend en canales lógicos con conteo dinámico (`X fuentes`) y subtítulos técnicos.
+  - Eliminación de texto de ayuda redundante en Ajustes para una interfaz más limpia.
+  - Actualización del modelo `NewsSource` con soporte para `count` y `description`.
+  - Corrección en la deduplicación de fuentes en backend y sincronización en la app.
+- **0.6.4 (Build 10)**:
+  - Corrección de endpoints de conexión y compatibilidad con el backend FastAPI.
+  - Ajustes de serialización en el modelo de artículos (`Article`).
+- **0.5.0**:
+  - Migración a arquitectura MVVM modular con Riverpod 3.
+  - Separación de vistas por funcionalidades: Radar, Descubrir, Guardados y Ajustes.
+  - Almacenamiento seguro de tokens y caché persistente de lectura.
 
-Interfaz adaptada de [TrendSpot News App](https://www.figma.com/community/file/1339560523860969699/trendspot-news-app), de [Hameed Shah](https://www.figma.com/@hameedshah), bajo [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). Se modificaron marca, textos, navegación, fuentes y lector. La atribución también aparece en Ajustes. No se copiaron fotografías de ejemplo.
+---
 
-Referencias: [Mozilla Readability](https://github.com/mozilla/readability), [API de Ollama](https://docs.ollama.com/api/generate), [API de Hacker News](https://github.com/HackerNews/API), [Forem API](https://developers.forem.com/api/v1).
+## Atribución y Licencia
+
+Diseño de interfaz adaptado de [TrendSpot News App](https://www.figma.com/community/file/1339560523860969699/trendspot-news-app) de [Hameed Shah](https://www.figma.com/@hameedshah) bajo licencia [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). Se adaptaron la paleta de colores, tipografía, navegación, sistema de canales y componentes del lector.
