@@ -11,6 +11,8 @@ abstract interface class NewsRepository {
   Future<Article?> cachedArticle(String id);
   Future<Article> fetchArticle(String id, ConnectionSettings settings);
   Future<void> cacheArticle(Article article);
+  Future<List<NewsSource>> cachedSources();
+  Future<List<NewsSource>> fetchSources(ConnectionSettings settings);
 }
 
 class ApiNewsRepository implements NewsRepository {
@@ -36,9 +38,20 @@ class ApiNewsRepository implements NewsRepository {
   @override
   Future<FeedResult> fetchFeed(ConnectionSettings settings) {
     service.configure(settings.endpoint, settings.token);
-    // Store the complete feed; source switches filter locally without losing
-    // cached stories from temporarily disabled sources.
-    return service.load(sources.map((s) => s.id).toSet());
+    // Store the complete 200 feed; source switches filter locally in the UI
+    // without losing cached stories from temporarily disabled sources.
+    return service.load();
+  }
+
+  @override
+  Future<List<NewsSource>> cachedSources() => local.readSources();
+
+  @override
+  Future<List<NewsSource>> fetchSources(ConnectionSettings settings) async {
+    service.configure(settings.endpoint, settings.token);
+    final sources = await service.fetchSources();
+    await local.writeSources(sources);
+    return sources;
   }
 
   @override

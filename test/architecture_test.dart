@@ -84,6 +84,13 @@ class DeferredNews implements NewsRepository {
   Future<void> cacheArticle(Article article) async {
     savedArticle = article;
   }
+
+  @override
+  Future<List<NewsSource>> cachedSources() async => defaultSources;
+
+  @override
+  Future<List<NewsSource>> fetchSources(ConnectionSettings settings) async =>
+      defaultSources;
 }
 
 Future<void> until(bool Function() condition) async {

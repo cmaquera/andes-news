@@ -32,7 +32,7 @@ final fixture = Article(
 
 class FixtureService extends NewsService {
   @override
-  Future<FeedResult> load(Set<String> enabled) async =>
+  Future<FeedResult> load([Set<String>? enabled]) async =>
       FeedResult([fixture], {});
   @override
   Future<Article> detail(String id) async => fixture;

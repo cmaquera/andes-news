@@ -23,13 +23,30 @@ String stamp(DateTime date) {
   return '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')} · ${d.hour.toString().padLeft(2, '0')}:${d.minute.toString().padLeft(2, '0')} PE';
 }
 
-Color sourceColor(String id) => switch (id) {
+Color sourceColor(String id) => switch (id.toLowerCase()) {
   'gestion' => const Color(0xff078383),
-  'xataka-mx' => const Color(0xff2d7343),
-  'github' => const Color(0xff23292f),
+  'xataka-mx' || 'xataka' => const Color(0xff2d7343),
+  'github' => const Color(0xff24292e),
   'dev' => const Color(0xff13181b),
-  'hn' => const Color(0xffff6600),
+  'hn' || 'hackernews' => const Color(0xffff6600),
+  'reddit' => const Color(0xffff4500),
+  'rss' => const Color(0xfff26522),
+  'telegram' => const Color(0xff24a1de),
+  'x' || 'twitter' => const Color(0xff0f1419),
   _ => const Color(0xff289aca),
+};
+
+String sourceInitial(String id) => switch (id.toLowerCase()) {
+  'gestion' => 'G',
+  'github' => 'GH',
+  'dev' => 'DEV',
+  'hn' || 'hackernews' => 'Y',
+  'xataka-mx' || 'xataka' => 'X',
+  'reddit' => 'RD',
+  'rss' => 'RSS',
+  'telegram' => 'TG',
+  'x' || 'twitter' => 'X',
+  _ => id.isEmpty ? '?' : id.substring(0, id.length >= 2 ? 2 : 1).toUpperCase(),
 };
 
 class SourceBadge extends StatelessWidget {
@@ -37,36 +54,32 @@ class SourceBadge extends StatelessWidget {
   final double size;
   const SourceBadge(this.id, {super.key, this.size = 28});
   @override
-  Widget build(BuildContext context) => Container(
-    width: size,
-    height: size,
-    alignment: Alignment.center,
-    decoration: BoxDecoration(
-      color: sourceColor(id),
-      borderRadius: BorderRadius.circular(size * .18),
-    ),
-    child: Text(
-      switch (id) {
-        'gestion' => 'G',
-        'github' => 'GH',
-        'dev' => 'DEV',
-        'hn' => 'Y',
-        'xataka-mx' => 'X',
-        _ => 'g',
-      },
-      style: TextStyle(
-        color: Colors.white,
-        fontSize:
-            size *
-            (id == 'dev'
-                ? 0.27
-                : id == 'github'
-                ? 0.35
-                : 0.56),
-        fontWeight: FontWeight.w800,
+  Widget build(BuildContext context) {
+    final initial = sourceInitial(id);
+    return Container(
+      width: size,
+      height: size,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: sourceColor(id),
+        borderRadius: BorderRadius.circular(size * .18),
       ),
-    ),
-  );
+      child: Text(
+        initial,
+        style: TextStyle(
+          color: Colors.white,
+          fontSize:
+              size *
+              (initial.length >= 3
+                  ? 0.28
+                  : initial.length == 2
+                  ? 0.38
+                  : 0.54),
+          fontWeight: FontWeight.w800,
+        ),
+      ),
+    );
+  }
 }
 
 class ArticleArtwork extends StatelessWidget {
@@ -75,53 +88,61 @@ class ArticleArtwork extends StatelessWidget {
   const ArticleArtwork({
     super.key,
     required this.article,
-    this.borderRadius = 10,
+    this.borderRadius = 8,
   });
-  Widget placeholder() => Container(
-    decoration: BoxDecoration(
-      gradient: LinearGradient(
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-        colors: [sourceColor(article.sourceId).withValues(alpha: .10), pale],
-      ),
-    ),
-    child: Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            switch (article.topic) {
-              'IA' => Icons.auto_awesome,
-              'Seguridad' => Icons.shield_outlined,
-              'Open source' => Icons.account_tree_outlined,
-              'Programación' => Icons.code_rounded,
-              _ => Icons.memory_rounded,
-            },
-            size: 34,
-            color: sourceColor(article.sourceId).withValues(alpha: .65),
-          ),
-          const SizedBox(height: 5),
-          Text(
-            article.topic,
-            style: TextStyle(fontSize: 9, color: sourceColor(article.sourceId)),
-          ),
-        ],
-      ),
-    ),
-  );
   @override
-  Widget build(BuildContext context) => ClipRRect(
-    borderRadius: BorderRadius.circular(borderRadius),
-    child: article.imageUrl.isEmpty
-        ? placeholder()
-        : Image.network(
-            article.imageUrl,
-            fit: BoxFit.cover,
-            width: double.infinity,
-            height: double.infinity,
-            errorBuilder: (_, error, stack) => placeholder(),
-            loadingBuilder: (_, child, progress) =>
-                progress == null ? child : placeholder(),
-          ),
+  Widget build(BuildContext context) {
+    if (article.imageUrl.isNotEmpty) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(borderRadius),
+        child: Image.network(
+          article.imageUrl,
+          fit: BoxFit.cover,
+          errorBuilder: (context, error, stackTrace) => _fallback(),
+        ),
+      );
+    }
+    return _fallback();
+  }
+
+  Widget _fallback() => Container(
+    decoration: BoxDecoration(
+      color: pale,
+      borderRadius: BorderRadius.circular(borderRadius),
+    ),
+    alignment: Alignment.center,
+    child: SourceBadge(article.sourceId, size: 32),
   );
 }
+
+Widget chips(
+  List<String> values,
+  String selected,
+  ValueChanged<String> onSelected,
+) => SizedBox(
+  height: 48,
+  child: ListView.separated(
+    padding: const EdgeInsets.symmetric(horizontal: 20),
+    scrollDirection: Axis.horizontal,
+    itemCount: values.length,
+    separatorBuilder: (context, index) => const SizedBox(width: 8),
+    itemBuilder: (_, i) {
+      final v = values[i];
+      final isSel = v == selected;
+      return ChoiceChip(
+        label: Text(v),
+        selected: isSel,
+        onSelected: (_) => onSelected(v),
+        labelStyle: TextStyle(
+          color: isSel ? Colors.white : ink,
+          fontSize: 12,
+          fontWeight: isSel ? FontWeight.w600 : FontWeight.w500,
+        ),
+        selectedColor: blue,
+        backgroundColor: pale,
+        showCheckmark: false,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      );
+    },
+  ),
+);

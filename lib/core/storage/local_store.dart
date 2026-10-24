@@ -38,6 +38,29 @@ class LocalStore {
     }
   }
 
+  Future<List<NewsSource>> readSources() async {
+    final prefs = await preferences;
+    try {
+      final json = jsonDecode(prefs.getString('cached_sources') ?? '[]');
+      if (json is! List) return defaultSources;
+      final result = json
+          .map((item) => NewsSource.fromJson(Map<String, dynamic>.from(item)))
+          .where((s) => s.id.isNotEmpty)
+          .toList();
+      return result.isNotEmpty ? List.unmodifiable(result) : defaultSources;
+    } catch (_) {
+      return defaultSources;
+    }
+  }
+
+  Future<void> writeSources(Iterable<NewsSource> sourcesList) async {
+    final prefs = await preferences;
+    await prefs.setString(
+      'cached_sources',
+      jsonEncode(sourcesList.map((s) => s.toJson()).toList()),
+    );
+  }
+
   Future<Article?> readArticle(String id) async {
     try {
       final raw = (await preferences).getString('article:v3:$id');

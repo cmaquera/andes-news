@@ -8,6 +8,7 @@ import '../bookmarks/bookmarks_controller.dart';
 
 class FeedState {
   final List<Article> articles;
+  final List<NewsSource> sources;
   final Map<String, String> sourceErrors;
   final Map<String, dynamic> counts;
   final String? error;
@@ -15,12 +16,16 @@ class FeedState {
   final DateTime? updated;
   FeedState({
     List<Article> articles = const [],
+    List<NewsSource> sources = const [],
     Map<String, String> sourceErrors = const {},
     Map<String, dynamic> counts = const {},
     this.error,
     this.loading = true,
     this.updated,
   }) : articles = List.unmodifiable(articles),
+       sources = List.unmodifiable(
+         sources.isNotEmpty ? sources : defaultSources,
+       ),
        sourceErrors = Map.unmodifiable(sourceErrors),
        counts = Map.unmodifiable(counts);
 }
@@ -44,13 +49,20 @@ class FeedController extends Notifier<FeedState> {
       ref.read(bookmarksProvider.notifier).initialize(),
     ]);
     try {
-      final cached = await repo.cachedFeed(), updated = await repo.lastUpdate();
+      final cached = await repo.cachedFeed(),
+          updated = await repo.lastUpdate(),
+          cachedSources = await repo.cachedSources();
       if (!ref.mounted) return;
-      state = FeedState(articles: cached, updated: updated);
+      state = FeedState(
+        articles: cached,
+        updated: updated,
+        sources: cachedSources,
+      );
     } catch (_) {
       if (!ref.mounted) return;
       state = FeedState(
         articles: state.articles,
+        sources: state.sources,
         error: 'No se pudo recuperar la caché del teléfono.',
       );
     }
@@ -68,6 +80,7 @@ class FeedController extends Notifier<FeedState> {
     final generation = ++_generation;
     state = FeedState(
       articles: state.articles,
+      sources: state.sources,
       updated: state.updated,
       sourceErrors: state.sourceErrors,
       counts: state.counts,
@@ -83,11 +96,16 @@ class FeedController extends Notifier<FeedState> {
     final repo = ref.read(newsRepositoryProvider);
     try {
       final result = await repo.fetchFeed(settings);
+      List<NewsSource> freshSources = state.sources;
+      try {
+        freshSources = await repo.fetchSources(settings);
+      } catch (_) {}
       if (!ref.mounted || generation != _generation) return;
       final articles = result.error == null ? result.articles : state.articles,
           updated = result.collectedAt ?? state.updated;
       state = FeedState(
         articles: articles,
+        sources: freshSources,
         updated: updated,
         sourceErrors: result.errors,
         counts: result.counts,
@@ -107,6 +125,7 @@ class FeedController extends Notifier<FeedState> {
           if (ref.mounted && generation == _generation) {
             state = FeedState(
               articles: state.articles,
+              sources: state.sources,
               updated: updated,
               sourceErrors: state.sourceErrors,
               counts: state.counts,
@@ -117,21 +136,22 @@ class FeedController extends Notifier<FeedState> {
         }
       }
     } catch (_) {
-      if (ref.mounted && generation == _generation) {
-        state = FeedState(
-          articles: state.articles,
-          updated: state.updated,
-          loading: false,
-          error: 'No se pudo actualizar. Conservamos la última carga.',
-        );
-      }
+      if (!ref.mounted || generation != _generation) return;
+      state = FeedState(
+        articles: state.articles,
+        sources: state.sources,
+        updated: state.updated,
+        loading: false,
+        error: 'No se pudo actualizar. Conservamos la última carga.',
+      );
     }
   }
 }
 
 List<Article> filterArticles(
   Iterable<Article> articles, {
-  required Set<String> enabled,
+  Set<String>? enabled,
+  ConnectionSettings? settings,
   String region = 'Todas',
   String topic = 'Todo',
   String source = '',
@@ -139,7 +159,9 @@ List<Article> filterArticles(
 }) => articles
     .where(
       (a) =>
-          enabled.contains(a.sourceId) &&
+          (settings != null
+              ? settings.isSourceEnabled(a.sourceId)
+              : (enabled == null || enabled.contains(a.sourceId))) &&
           (region == 'Todas' ||
               a.region == region ||
               (region == 'Latinoamérica' && a.region == 'Perú')) &&

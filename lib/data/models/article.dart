@@ -2,17 +2,38 @@ const defaultAndesEndpoint = 'https://andes-news.cmaquera.com';
 
 class NewsSource {
   final String id, name, region;
-  const NewsSource(this.id, this.name, this.region);
+  final List<String> aliases;
+  const NewsSource(this.id, this.name, this.region, [this.aliases = const []]);
+
+  factory NewsSource.fromJson(Map<String, dynamic> j) {
+    final rawAliases = j['aliases'] as List? ?? [];
+    return NewsSource(
+      j['id']?.toString() ?? '',
+      j['name']?.toString() ?? '',
+      j['region']?.toString() ?? 'Global',
+      rawAliases.map((e) => e.toString()).toList(),
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'name': name,
+    'region': region,
+    'aliases': aliases,
+  };
 }
 
-const sources = [
-  NewsSource('gestion', 'Gestión · Tecnología', 'Perú'),
-  NewsSource('xataka-mx', 'Xataka México', 'Latinoamérica'),
-  NewsSource('genbeta', 'Genbeta', 'Global'),
-  NewsSource('github', 'GitHub Changelog', 'Global'),
-  NewsSource('dev', 'DEV en español', 'Global'),
-  NewsSource('hn', 'Hacker News', 'Global'),
+const defaultSources = [
+  NewsSource('hackernews', 'Hacker News', 'Global', ['hn']),
+  NewsSource('reddit', 'Reddit r/LocalLLaMA', 'Global'),
+  NewsSource('github', 'GitHub Trending AI & Software', 'Global'),
+  NewsSource('rss', 'The Verge - AI Tech', 'Global'),
+  NewsSource('x', 'Andrej Karpathy (X/Twitter)', 'Global'),
+  NewsSource('telegram', 'Telegram Kubernetes News', 'Global'),
 ];
+
+// Deprecated compatibility alias for legacy tests:
+const sources = defaultSources;
 
 class ContentBlock {
   final String type, text, url, alt, poster, provider, caption;
@@ -93,6 +114,7 @@ class Article {
       coverage,
       language,
       author;
+  final String _sourceName;
   final DateTime? published;
   final int score, comments, wordCount;
   final List<ContentBlock> content, translatedContent;
@@ -115,6 +137,7 @@ class Article {
     this.coverage = 'unavailable',
     this.language = '',
     this.author = '',
+    this._sourceName = '',
     this.wordCount = 0,
     List<ContentBlock> content = const [],
     List<ContentBlock> translatedContent = const [],
@@ -123,14 +146,16 @@ class Article {
        translatedContent = List.unmodifiable(translatedContent),
        keyPoints = List.unmodifiable(keyPoints);
   String get displayTitle => titleEs.isEmpty ? title : titleEs;
-  String get sourceName =>
-      sources.where((s) => s.id == sourceId).firstOrNull?.name ?? sourceId;
+  String get sourceName => _sourceName.isNotEmpty
+      ? _sourceName
+      : (sources.where((s) => s.id == sourceId).firstOrNull?.name ?? sourceId);
   Map<String, dynamic> toJson() => {
     'id': id,
     'title': title,
     'url': url,
     'excerpt': excerpt,
     'sourceId': sourceId,
+    'sourceName': sourceName,
     'region': region,
     'topic': topic,
     'imageUrl': imageUrl,
@@ -148,35 +173,41 @@ class Article {
     'translatedContent': translatedContent.map((b) => b.toJson()).toList(),
     'keyPoints': keyPoints.toList(),
   };
-  factory Article.fromJson(Map<String, dynamic> j) => Article(
-    id: j['id'],
-    title: j['title'],
-    url: j['url'],
-    excerpt: j['feedExcerpt'] ?? j['excerpt'] ?? '',
-    sourceId: j['sourceId'],
-    region: j['region'],
-    topic: j['topic'],
-    imageUrl: j['imageUrl'] ?? '',
-    published: DateTime.tryParse(j['published'] ?? ''),
-    score: j['score'] ?? 0,
-    comments: j['comments'] ?? 0,
-    titleEs: j['titleEs'] ?? '',
-    abstract: j['abstract'] ?? '',
-    status: j['status'] ?? 'queued',
-    coverage: j['coverage'] ?? 'unavailable',
-    language: j['language'] ?? '',
-    author: j['author'] ?? '',
-    wordCount: j['wordCount'] ?? 0,
-    content: (j['content'] as List? ?? [])
-        .map((b) => ContentBlock.fromJson(b))
-        .toList(),
-    translatedContent: (j['translatedContent'] as List? ?? [])
-        .map((b) => ContentBlock.fromJson(b))
-        .toList(),
-    keyPoints: (j['keyPoints'] as List? ?? [])
-        .map((e) => e.toString())
-        .toList(),
-  );
+  factory Article.fromJson(Map<String, dynamic> j) {
+    if (j['id'] == null || j['title'] == null) {
+      throw const FormatException('Invalid article JSON: missing id or title');
+    }
+    return Article(
+      id: j['id'].toString(),
+      title: j['title'].toString(),
+      url: j['url']?.toString() ?? '',
+      excerpt: j['feedExcerpt']?.toString() ?? j['excerpt']?.toString() ?? '',
+      sourceId: j['sourceId']?.toString() ?? '',
+      sourceName: j['sourceName']?.toString() ?? '',
+      region: j['region']?.toString() ?? 'Global',
+      topic: j['topic']?.toString() ?? 'software',
+      imageUrl: j['imageUrl']?.toString() ?? '',
+      published: DateTime.tryParse(j['published']?.toString() ?? ''),
+      score: j['score'] is num ? (j['score'] as num).toInt() : 0,
+      comments: j['comments'] is num ? (j['comments'] as num).toInt() : 0,
+      titleEs: j['titleEs']?.toString() ?? '',
+      abstract: j['abstract']?.toString() ?? '',
+      status: j['status']?.toString() ?? 'ready',
+      coverage: j['coverage']?.toString() ?? 'available',
+      language: j['language']?.toString() ?? '',
+      author: j['author']?.toString() ?? '',
+      wordCount: j['wordCount'] is num ? (j['wordCount'] as num).toInt() : 0,
+      content: (j['content'] as List? ?? [])
+          .map((b) => ContentBlock.fromJson(b))
+          .toList(),
+      translatedContent: (j['translatedContent'] as List? ?? [])
+          .map((b) => ContentBlock.fromJson(b))
+          .toList(),
+      keyPoints: (j['keyPoints'] as List? ?? [])
+          .map((e) => e.toString())
+          .toList(),
+    );
+  }
 }
 
 class FeedResult {

@@ -36,11 +36,14 @@ class NewsService {
     token = credential;
   }
 
-  Future<Map<String, dynamic>> getJson(String path) async {
+  Future<Map<String, dynamic>> getJson(
+    String path, {
+    bool requireToken = false,
+  }) async {
     if (!validAndesEndpoint(endpoint)) {
       throw const FeedException('Configura la URL HTTPS de Andes en Ajustes.');
     }
-    if (token.length < 32) {
+    if (requireToken && token.length < 32) {
       throw const FeedException(
         'Configura tu token de acceso en Ajustes para cargar las noticias del servidor.',
       );
@@ -49,7 +52,9 @@ class NewsService {
       'GET',
       Uri.parse('${endpoint.replaceFirst(RegExp(r'/$'), '')}$path'),
     )..followRedirects = false;
-    request.headers['Authorization'] = 'Bearer $token';
+    if (token.isNotEmpty) {
+      request.headers['Authorization'] = 'Bearer $token';
+    }
     late http.Response r;
     try {
       r = await http.Response.fromStream(
@@ -95,16 +100,19 @@ class NewsService {
     }
   }
 
-  Future<FeedResult> load(Set<String> enabled) async {
+  Future<FeedResult> load([Set<String>? enabled]) async {
     try {
       final data = await getJson('/articles?limit=200');
-      final rows = (data['articles'] as List)
-          .map((j) => Article.fromJson(j))
-          .where((a) => enabled.contains(a.sourceId))
-          .toList();
+      var rows = (data['articles'] as List).map(
+        (j) => Article.fromJson(Map<String, dynamic>.from(j)),
+      );
+      if (enabled != null) {
+        rows = rows.where((a) => enabled.contains(a.sourceId));
+      }
+      final list = rows.toList();
       final collection = data['collection'] as Map<String, dynamic>?;
       return FeedResult(
-        rows,
+        list,
         (collection?['errors'] as Map<String, dynamic>? ?? {}).map(
           (key, value) => MapEntry(key, value.toString()),
         ),
@@ -119,6 +127,20 @@ class NewsService {
         {},
         error: 'El servidor devolvió noticias con un formato inesperado. Conservamos tu última carga.',
       );
+    }
+  }
+
+  Future<List<NewsSource>> fetchSources() async {
+    try {
+      final data = await getJson('/sources');
+      final list = data['sources'] as List? ?? [];
+      final result = list
+          .map((j) => NewsSource.fromJson(Map<String, dynamic>.from(j)))
+          .where((s) => s.id.isNotEmpty)
+          .toList();
+      return result.isNotEmpty ? result : defaultSources;
+    } catch (_) {
+      return defaultSources;
     }
   }
 

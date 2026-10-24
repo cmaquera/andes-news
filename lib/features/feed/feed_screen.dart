@@ -70,7 +70,8 @@ class _FeedViewState extends ConsumerState<FeedView> {
   String displayTitle(Article a) => a.displayTitle;
   List<Article> get visible => filterArticles(
     tab == 2 ? saved.values : articles,
-    enabled: tab == 2 ? saved.values.map((a) => a.sourceId).toSet() : enabled,
+    settings: tab == 2 ? null : ref.read(settingsProvider).value,
+    enabled: tab == 2 ? saved.values.map((a) => a.sourceId).toSet() : null,
     region: region,
     topic: topic,
     source: sourceFilter,
@@ -445,10 +446,10 @@ class _FeedViewState extends ConsumerState<FeedView> {
         child: ListView.separated(
           padding: const EdgeInsets.symmetric(horizontal: 20),
           scrollDirection: Axis.horizontal,
-          itemCount: sources.length,
+          itemCount: feed.sources.length,
           separatorBuilder: (_, i) => const SizedBox(width: 16),
           itemBuilder: (_, i) {
-            final s = sources[i];
+            final s = feed.sources[i];
             return InkWell(
               onTap: () => setState(
                 () => sourceFilter = sourceFilter == s.id ? '' : s.id,

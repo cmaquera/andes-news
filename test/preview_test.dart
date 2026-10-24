@@ -18,7 +18,7 @@ class PreviewService extends NewsService {
   final List<Article> articles;
   PreviewService(this.articles);
   @override
-  Future<FeedResult> load(Set<String> enabled) async =>
+  Future<FeedResult> load([Set<String>? enabled]) async =>
       FeedResult(articles, {});
   @override
   Future<Article> detail(String id) async =>

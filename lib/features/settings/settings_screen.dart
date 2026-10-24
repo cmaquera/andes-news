@@ -6,7 +6,6 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../app/theme.dart';
 import '../../core/ui/news_widgets.dart';
-import '../../data/models/article.dart';
 import '../feed/feed_controller.dart';
 import 'settings_controller.dart';
 
@@ -22,7 +21,6 @@ class _SettingsViewState extends ConsumerState<SettingsScreen> {
   SettingsState get state => ref.read(settingsProvider);
   bool get loading => state.loading;
   bool get savingConfig => state.saving;
-  Set<String> get enabled => state.value.enabledSources;
   Map<String, String> get errors => ref.read(feedProvider).sourceErrors;
   @override
   void initState() {
@@ -107,7 +105,7 @@ class _SettingsViewState extends ConsumerState<SettingsScreen> {
           autocorrect: false,
           enableSuggestions: false,
           decoration: const InputDecoration(
-            labelText: 'Token de acceso',
+            labelText: 'Token de acceso (opcional para lectura)',
             prefixIcon: Icon(Icons.lock_outline),
           ),
         ),
@@ -133,7 +131,7 @@ class _SettingsViewState extends ConsumerState<SettingsScreen> {
           ),
         ),
         const SizedBox(height: 8),
-        ...sources.map(
+        ...state.sources.map(
           (s) => SwitchListTile(
             contentPadding: EdgeInsets.zero,
             secondary: SourceBadge(s.id, size: 35),
@@ -145,7 +143,7 @@ class _SettingsViewState extends ConsumerState<SettingsScreen> {
               '${s.region}${errors.containsKey(s.id) ? ' · Sin actualizar' : ''}',
               style: const TextStyle(color: muted, fontSize: 11),
             ),
-            value: enabled.contains(s.id),
+            value: state.value.isSourceEnabled(s.id),
             onChanged: loading || savingConfig
                 ? null
                 : (v) async {
@@ -165,7 +163,7 @@ class _SettingsViewState extends ConsumerState<SettingsScreen> {
         const Divider(),
         const SizedBox(height: 12),
         const Text(
-          'Andes · Versión 0.5',
+          'Andes · Versión 0.6.4',
           style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
         ),
         const SizedBox(height: 8),
