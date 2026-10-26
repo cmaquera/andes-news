@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:andes_news/app/providers.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -108,4 +109,54 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
+  testWidgets('Shares article title and original URL from feed and reader', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({});
+    FlutterSecureStorage.setMockInitialValues({});
+    final shareCalls = <MethodCall>[];
+    const channel = MethodChannel('dev.fluttercommunity.plus/share');
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(channel, (call) async {
+          shareCalls.add(call);
+          return 'dev.fluttercommunity.plus/share/unavailable';
+        });
+    addTearDown(
+      () => TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, null),
+    );
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: andesTheme(),
+        home: FeedScreen(service: FixtureService()),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Compartir noticia'));
+    await tester.pumpAndSettle();
+    expect(shareCalls, hasLength(1));
+    expect(
+      shareCalls.single.arguments,
+      allOf(
+        containsPair('text', 'Titular en español\nhttps://example.com/a'),
+        containsPair('subject', 'Titular en español'),
+      ),
+    );
+    await tester.tap(find.text('Titular en español'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Compartir noticia'));
+    await tester.pumpAndSettle();
+    expect(shareCalls, hasLength(2));
+    expect(
+      shareCalls.last.arguments,
+      allOf(
+        containsPair('text', 'Titular en español\nhttps://example.com/a'),
+        containsPair('subject', 'Titular en español'),
+      ),
+    );
+  });
 }

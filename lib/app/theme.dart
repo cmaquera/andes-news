@@ -1,14 +1,19 @@
 import 'package:flutter/material.dart';
 
-const ink = Color(0xff13181b),
+const ink = Color(0xff06283d),
     blue = Color(0xff08a9ee),
-    muted = Color(0xff7a858d),
-    pale = Color(0xfff0faff);
+    muted = Color(0xff546e7d),
+    pale = Color(0xffeaf6fc);
 // Retained for callers of the first version's theme.
 const green = blue;
 ThemeData andesTheme() => ThemeData(
   useMaterial3: true,
-  colorScheme: ColorScheme.fromSeed(seedColor: blue, primary: blue),
+  colorScheme: ColorScheme.fromSeed(
+    seedColor: blue,
+    primary: blue,
+    onSurface: ink,
+    secondary: ink,
+  ),
   scaffoldBackgroundColor: Colors.white,
   fontFamily: 'sans-serif',
   textTheme: const TextTheme(
@@ -29,7 +34,7 @@ ThemeData andesTheme() => ThemeData(
     surfaceTintColor: Colors.transparent,
     elevation: 0,
   ),
-  dividerColor: const Color(0xffedf0f2),
+  dividerColor: const Color(0xffe2e8ec),
   inputDecorationTheme: InputDecorationTheme(
     filled: true,
     fillColor: pale,
@@ -55,7 +60,7 @@ ThemeData andesTheme() => ThemeData(
     color: Colors.white,
     shape: RoundedRectangleBorder(
       borderRadius: BorderRadius.circular(12),
-      side: const BorderSide(color: Color(0xffedf0f2)),
+      side: const BorderSide(color: Color(0xffe2e8ec)),
     ),
   ),
 );

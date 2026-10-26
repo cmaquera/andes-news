@@ -63,7 +63,7 @@ class ReaderImage extends StatelessWidget {
                 block.text,
                 style: const TextStyle(
                   fontSize: 12,
-                  color: Color(0xff7a858d),
+                  color: Color(0xff546e7d),
                   height: 1.5,
                 ),
               ),
@@ -80,7 +80,7 @@ class _MediaNotice extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.all(18),
-    color: const Color(0xfff4f6f7),
+    color: const Color(0xfff5f4ef),
     child: Text(text, style: const TextStyle(fontSize: 13)),
   );
 }
@@ -150,7 +150,7 @@ class _ReaderVideoState extends State<ReaderVideo> {
       margin: const EdgeInsets.only(bottom: 18),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: const Color(0xfff4f6f7),
+        color: const Color(0xfff5f4ef),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Column(
@@ -302,7 +302,7 @@ class ReaderTable extends StatelessWidget {
                 fontSize: fontSize - 3,
                 height: 1.4,
                 fontWeight: c.header ? FontWeight.w700 : FontWeight.w400,
-                color: const Color(0xff13181b),
+                color: const Color(0xff06283d),
               );
               for (final p in placed) {
                 final painter = TextPainter(
@@ -344,10 +344,10 @@ class ReaderTable extends StatelessWidget {
                               padding: const EdgeInsets.all(12),
                               decoration: BoxDecoration(
                                 color: p.cell.header
-                                    ? const Color(0xfff0faff)
+                                    ? const Color(0xffeaf6fc)
                                     : Colors.white,
                                 border: Border.all(
-                                  color: const Color(0xffdce5e9),
+                                  color: const Color(0xffe2e8ec),
                                   width: 0.5,
                                 ),
                               ),
@@ -368,7 +368,7 @@ class ReaderTable extends StatelessWidget {
             padding: EdgeInsets.only(top: 6),
             child: Text(
               'Desliza la tabla horizontalmente para ver todas las columnas.',
-              style: TextStyle(fontSize: 11, color: Color(0xff7a858d)),
+              style: TextStyle(fontSize: 11, color: Color(0xff546e7d)),
             ),
           ),
         ],

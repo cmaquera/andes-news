@@ -94,12 +94,14 @@ class NewsRow extends StatelessWidget {
   final Article a;
   final bool isSaved;
   final VoidCallback onOpen, onBookmark;
+  final VoidCallback? onShare;
   const NewsRow({
     super.key,
     required Article article,
     required this.isSaved,
     required this.onOpen,
     required this.onBookmark,
+    this.onShare,
   }) : a = article;
   @override
   Widget build(BuildContext context) => InkWell(
@@ -131,6 +133,12 @@ class NewsRow extends StatelessWidget {
                     ),
                   ],
                 ),
+              ),
+              IconButton(
+                tooltip: 'Compartir noticia',
+                visualDensity: VisualDensity.compact,
+                onPressed: onShare ?? () => shareArticle(context, a),
+                icon: const Icon(Icons.share_outlined, color: muted, size: 19),
               ),
               IconButton(
                 tooltip: isSaved ? 'Quitar de guardados' : 'Guardar noticia',

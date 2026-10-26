@@ -200,6 +200,7 @@ class Article {
        translatedContent = List.unmodifiable(translatedContent),
        keyPoints = List.unmodifiable(keyPoints);
   String get displayTitle => titleEs.isEmpty ? title : titleEs;
+  String get shareText => url.isEmpty ? displayTitle : '$displayTitle\n$url';
   String get sourceName => _sourceName.isNotEmpty
       ? _sourceName
       : (sources.where((s) => s.id == sourceId).firstOrNull?.name ?? sourceId);

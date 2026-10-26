@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../app/theme.dart';
+import '../../core/ui/news_widgets.dart';
 import '../../data/models/article.dart';
 import '../settings/settings_controller.dart';
 import '../bookmarks/bookmarks_controller.dart';
@@ -81,7 +82,7 @@ class _ReaderState extends ConsumerState<ArticleScreen> {
         margin: const EdgeInsets.symmetric(vertical: 10),
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: const Color(0xfff4f6f7),
+          color: const Color(0xfff5f4ef),
           borderRadius: BorderRadius.circular(8),
         ),
         child: SingleChildScrollView(
@@ -131,6 +132,11 @@ class _ReaderState extends ConsumerState<ArticleScreen> {
             tooltip: 'Actualizar artículo',
             onPressed: loading ? null : load,
             icon: const Icon(Icons.refresh),
+          ),
+          IconButton(
+            tooltip: 'Compartir noticia',
+            onPressed: () => shareArticle(context, article),
+            icon: const Icon(Icons.share_outlined, color: _ink),
           ),
           IconButton(
             tooltip: saved ? 'Quitar de guardados' : 'Guardar noticia',

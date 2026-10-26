@@ -140,7 +140,7 @@ class _FeedViewState extends ConsumerState<FeedView> {
       ),
       bottomNavigationBar: Container(
         decoration: const BoxDecoration(
-          border: Border(top: BorderSide(color: Color(0xffedf0f2))),
+          border: Border(top: BorderSide(color: Color(0xffe2e8ec))),
         ),
         child: NavigationBar(
           height: 70,
@@ -489,6 +489,7 @@ class _FeedViewState extends ConsumerState<FeedView> {
     isSaved: saved.containsKey(a.id),
     onOpen: () => showArticle(a),
     onBookmark: () => toggleSaved(a),
+    onShare: () => shareArticle(context, a),
   );
   void notice(String text) {
     if (mounted) {

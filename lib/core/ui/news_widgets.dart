@@ -1,7 +1,34 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../app/theme.dart';
 import '../../data/models/article.dart';
+
+Future<void> shareArticle(BuildContext context, Article article) async {
+  final text = article.shareText.trim();
+  if (text.isEmpty) return;
+  try {
+    final box = context.findRenderObject() as RenderBox?;
+    final origin = box != null && box.hasSize
+        ? box.localToGlobal(Offset.zero) & box.size
+        : null;
+    await SharePlus.instance.share(
+      ShareParams(
+        text: text,
+        subject: article.displayTitle,
+        sharePositionOrigin: origin,
+      ),
+    );
+  } catch (_) {
+    await Clipboard.setData(ClipboardData(text: text));
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Enlace copiado al portapapeles.')),
+      );
+    }
+  }
+}
 
 Widget topicTag(String text) => Container(
   padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
